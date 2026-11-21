@@ -13,6 +13,9 @@ RUN pip install -r requirements.txt
 # Копируем код
 COPY . .
 
+# Делаем entrypoint исполняемым (на случай монтирования с Windows-хоста уберём CR)
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 # Открываем порт и запускаем
 EXPOSE 8080
-ENTRYPOINT ["python", "-u", "app/main.py"]
+ENTRYPOINT ["/app/entrypoint.sh"]

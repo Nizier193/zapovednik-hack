@@ -1,10 +1,12 @@
 # Сокращённый CI/CD
 # Используется для быстрого деплоя на сервер
-# Без тестирования и сборки контейнеров
+# Без тестирования и сборки контейнеров в registry.
+# На сервере просто `git pull` + `docker compose up -d --build`.
 
 on:
     push:
-        branches: [none] # Не используется сейчас
+        branches: [master, main]
+    workflow_dispatch:
 
 
 jobs:
@@ -17,25 +19,44 @@ jobs:
         # Подключение к машине
         - name: Clone repo
           uses: appleboy/ssh-action@master
+          env:
+            GHP_PAT: ${{ secrets.GHP_PAT }}
+            REPO: ${{ github.repository }}
+            CI_TAG: ${{ vars.DOCKER_CI_TAG }}
           with:
             host: ${{ secrets.HOST }}
             username: ${{ secrets.USERNAME }}
             key: ${{ secrets.SSH_KEY }}
+            envs: GHP_PAT,REPO,CI_TAG
             script: |
-              mkdir -p /root/${{ vars.DOCKER_CI_TAG }}
-              cd /root/${{ vars.DOCKER_CI_TAG }}
+              set -e
+              export GIT_TERMINAL_PROMPT=0
 
-              # Если нет репозитория, копируем его с docker-compose и .env.example
+              if [ -z "${GHP_PAT:-}" ]; then
+                echo "::error::secret GHP_PAT пуст или не передан"
+                exit 1
+              fi
+              if [ -z "${CI_TAG:-}" ]; then
+                echo "::error::variable DOCKER_CI_TAG не настроен в Actions Variables"
+                exit 1
+              fi
+
+              mkdir -p "/root/${CI_TAG}"
+              cd "/root/${CI_TAG}"
+
               if [ ! -d ".git" ]; then
-                git clone https://${{ secrets.GHP_PAT }}@github.com/${{ github.repository }} .
+                echo "[deploy] cloning ${REPO} into /root/${CI_TAG}"
+                git clone "https://${GHP_PAT}@github.com/${REPO}" .
               else
+                echo "[deploy] updating /root/${CI_TAG} (git fetch + reset --hard)"
+                git remote set-url origin "https://${GHP_PAT}@github.com/${REPO}"
                 git fetch origin
                 git reset --hard origin/master
               fi
 
-              # Создаём .env из .env.example
               if [ ! -f .env ]; then
                 cp .env.example .env
+                echo "[deploy] создан .env из .env.example"
               fi
 
         - name: Run docker-compose
@@ -46,4 +67,9 @@ jobs:
             key: ${{ secrets.SSH_KEY }}
             script: |
               cd /root/${{ vars.DOCKER_CI_TAG }}
-              docker compose up -d --build
+              docker compose pull || true
+              docker compose up -d --build --remove-orphans
+              echo "--- docker compose ps ---"
+              docker compose ps
+              echo "--- backend logs (tail 40) ---"
+              docker compose logs --tail=40 backend || true
