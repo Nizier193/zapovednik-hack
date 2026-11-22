@@ -2,9 +2,10 @@ let data = null;
 const get = id => document.getElementById(id);
 const dayMs = 86400000;
 const palette = {
-  ink: "#e4eef3", muted: "#93a6b2", line: "rgba(210, 226, 232, 0.16)",
-  teal: "#7dcec6", coral: "#e08b84", blue: "#7eaae0", gold: "#e3c36a",
-  lilac: "#c9a0e0", soil5: "#e0b07a", soil10: "#7dcec6", soil20: "#7eaae0"
+  ink: "#F1F6E8", muted: "#ACC0B0", line: "#3B5547",
+  accent: "#BCED91", warm: "#E4C98A", coral: "#E0A090", blue: "#8FB4A4",
+  soil5: "#E4C98A", soil10: "#BCED91", soil20: "#7EAA98",
+  speeds: ["#3E6B52", "#6E9A74", "#BCED91", "#E4C98A", "#E0A878"]
 };
 const metrics = {
   t_air: ["Температура воздуха", "°C"], rh: ["Относительная влажность", "%"],
@@ -20,16 +21,21 @@ const stations = [
 ];
 const sectorNames = ["С", "ССВ", "СВ", "ВСВ", "В", "ВЮВ", "ЮВ", "ЮЮВ", "Ю", "ЮЮЗ", "ЮЗ", "ЗЮЗ", "З", "ЗСЗ", "СЗ", "ССЗ"];
 const speedBins = ["0 < v < 2", "2 ≤ v < 5", "5 ≤ v < 10", "10 ≤ v < 15", "v ≥ 15"];
-const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart", view: "series", trendMonth: 1, lines: [] };
+const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart", view: "series", step: "month", trendMonth: 1, lines: [], clipNote: "" };
 const format = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 const formatFull = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6 });
 const monthName = new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: "UTC" });
+const longDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const axisDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "UTC" });
 const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
 const on = id => get(id).checked;
 const unit = () => metrics[state.metric][1];
-const text = value => value === null || value === undefined || !Number.isFinite(value) ? "—" : `${formatFull.format(value)} ${unit()}`;
+const text = value => value === null || value === undefined || !Number.isFinite(value) ? "нет" : `${formatFull.format(value)} ${unit()}`;
 let months = [];
+let monthShown = [];
 let shown = [];
+let editingDates = false;
+let brushDrag = null;
 
 function yearsWord(count) {
   const tail = count % 100, last = count % 10;
@@ -41,11 +47,20 @@ function yearsWord(count) {
 
 function stationData() { return data.stations[state.station]; }
 function seriesData() { return stationData().series[state.metric]; }
-function dayIndex(dateStr) {
-  const start = Date.parse(stationData().start);
-  return Math.round((Date.parse(dateStr) - start) / dayMs);
+function utcDay(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
 }
-function dateAt(index) { return new Date(Date.parse(stationData().start) + index * dayMs); }
+function dayIndex(dateStr) {
+  return Math.round((utcDay(dateStr) - utcDay(stationData().start)) / dayMs);
+}
+function dateAt(index) { return new Date(utcDay(stationData().start) + index * dayMs); }
+function iso(index) { return dateAt(index).toISOString().slice(0, 10); }
+function lastIndex() { return Math.max(0, (seriesData().days || []).length - 1); }
+function clampIndex(index) {
+  if (!Number.isFinite(index)) return 0;
+  return Math.max(0, Math.min(lastIndex(), index));
+}
 function circle(values) {
   const east = average(values.map(v => Math.sin(v * Math.PI / 180)));
   const north = average(values.map(v => Math.cos(v * Math.PI / 180)));
@@ -99,7 +114,7 @@ function buildMonths() {
   return built;
 }
 
-function inWindow(item) { return item.end >= state.from && item.start <= state.to; }
+function inWindow(item) { return item.start >= state.from && item.end <= state.to; }
 
 // ---- линейный тренд одного календарного месяца по годам (не смешивает сезоны) ----
 function monthTrend(items, month) {
@@ -140,8 +155,7 @@ function statIcon(kind) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[kind]}</svg>`;
 }
 
-function bindMenu() {
-  const select = get("metric");
+function bindMenu(select) {
   let wrap = select.nextElementSibling;
   if (!wrap || !wrap.classList.contains("menu")) {
     wrap = document.createElement("div");
@@ -179,23 +193,206 @@ function bindMenu() {
     list.hidden = !opening;
   });
   wrap.append(button, list);
+  select._syncMenu = sync;
   sync();
 }
 
-function setStation(id) {
+function syncMenus() {
+  document.querySelectorAll("select").forEach(select => {
+    if (typeof select._syncMenu === "function") select._syncMenu();
+  });
+}
+
+function setStation(id, options = {}) {
+  const previous = options.keep ? { start: iso(state.from), end: iso(state.to) } : null;
   state.station = id;
   const keys = (stationData().parameters || []).filter(key => metrics[key]);
-  if (!keys.includes(state.metric)) state.metric = "t_air";
+  if (options.metric && keys.includes(options.metric)) state.metric = options.metric;
+  else if (options.metric && !keys.includes(options.metric)) {
+    state.clipNote = "Показатель из адреса на этой станции не измеряется.";
+    if (!keys.includes(state.metric)) state.metric = keys.includes("t_air") ? "t_air" : keys[0];
+  } else if (!keys.includes(state.metric)) state.metric = keys.includes("t_air") ? "t_air" : keys[0];
   const select = get("metric");
   select.replaceChildren(...keys.map(key => new Option(metrics[key][0], key)));
   select.value = state.metric;
-  bindMenu();
-  state.from = 0;
-  state.to = seriesData().days.length - 1;
+  bindMenu(select);
+  const max = lastIndex();
   const start = get("range-start"), end = get("range-end");
-  start.min = 0; end.min = 0; start.max = state.to; end.max = state.to;
+  start.min = 0; end.min = 0; start.max = max; end.max = max;
+  const arch = stationData();
+  get("archive-start").textContent = longDate.format(dateAt(0));
+  get("archive-end").textContent = longDate.format(dateAt(max));
+  if (!options.metric) state.clipNote = "";
+  if (previous) {
+    let a = previous.start;
+    let b = previous.end;
+    if (b < arch.start || a > arch.end) {
+      state.clipNote = `Период ${previous.start} - ${previous.end} вне архива станции (${arch.start} - ${arch.end}). Показан весь архив.`;
+      a = arch.start;
+      b = arch.end;
+    } else {
+      const notes = [];
+      if (a < arch.start) { notes.push(`Начало обрезано до ${arch.start}: раньше архива этой станции суток нет.`); a = arch.start; }
+      if (b > arch.end) { notes.push(`Конец обрезан до ${arch.end}: позже архива этой станции суток нет.`); b = arch.end; }
+      if (notes.length) state.clipNote = notes.join(" ");
+    }
+    state.from = clampIndex(dayIndex(a));
+    state.to = clampIndex(dayIndex(b));
+    if (state.from > state.to) { const swap = state.from; state.from = state.to; state.to = swap; }
+  } else {
+    state.from = 0;
+    state.to = max;
+  }
+  editingDates = false;
   renderStations();
   update();
+}
+
+function parseDay(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [y, m, d] = value.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return value;
+}
+
+function validateRange(rawStart, rawEnd) {
+  const arch = stationData();
+  const errors = { start: "", end: "" };
+  const a = parseDay(rawStart);
+  const b = parseDay(rawEnd);
+  if (!rawStart) errors.start = "Укажите дату начала.";
+  else if (!a) errors.start = "Дата начала не распознана.";
+  else if (a < arch.start) errors.start = `Дата начала раньше архива станции (${arch.start}).`;
+  else if (a > arch.end) errors.start = `Дата начала позже архива станции (${arch.end}).`;
+  if (!rawEnd) errors.end = "Укажите дату конца.";
+  else if (!b) errors.end = "Дата конца не распознана.";
+  else if (b < arch.start) errors.end = `Дата конца раньше архива станции (${arch.start}).`;
+  else if (b > arch.end) errors.end = `Дата конца позже архива станции (${arch.end}).`;
+  if (!errors.start && !errors.end && a > b) {
+    errors.start = "Дата начала позже даты конца.";
+    errors.end = "Дата конца раньше даты начала.";
+  }
+  return { ok: !errors.start && !errors.end, errors, start: a, end: b };
+}
+
+function clearDateErrors() {
+  const start = get("date-start-error");
+  const end = get("date-end-error");
+  if (start) start.textContent = "";
+  if (end) end.textContent = "";
+}
+
+function applyDatesFromFields() {
+  const result = validateRange(get("date-start").value, get("date-end").value);
+  get("date-start-error").textContent = result.errors.start;
+  get("date-end-error").textContent = result.errors.end;
+  if (!result.ok) return;
+  editingDates = false;
+  state.clipNote = "";
+  state.from = clampIndex(dayIndex(result.start));
+  state.to = clampIndex(dayIndex(result.end));
+  if (state.from > state.to) {
+    const swap = state.from;
+    state.from = state.to;
+    state.to = swap;
+  }
+  update();
+}
+
+function applyQueryRange(rawStart, rawEnd, asDay) {
+  const result = validateRange(rawStart, rawEnd);
+  if (!result.ok) {
+    editingDates = true;
+    get("date-start").value = rawStart || "";
+    get("date-end").value = rawEnd || "";
+    get("date-start-error").textContent = result.errors.start;
+    get("date-end-error").textContent = result.errors.end;
+    return;
+  }
+  if (asDay) state.step = "day";
+  editingDates = false;
+  state.from = dayIndex(result.start);
+  state.to = dayIndex(result.end);
+  update();
+}
+
+function windDirectionBlock(startIso, endIso) {
+  if (state.station !== "ame60") return "";
+  if (startIso >= "1998-01-01" && endIso <= "1998-12-31") return "В 1998 году у АМЕ-60 нет столбца направления ветра.";
+  if (startIso >= "2021-01-01" && endIso <= "2021-12-31") return "В 2021 году направление ветра АМЕ-60 недостоверно.";
+  return "";
+}
+
+function dayStatusText(entry, dateStr) {
+  const arch = stationData();
+  if (!dateStr || dateStr < arch.start || dateStr > arch.end) return `Дата вне периода станции (${arch.start} - ${arch.end}).`;
+  if (state.metric === "wind_dir") {
+    const block = windDirectionBlock(dateStr, dateStr);
+    if (block) return block;
+  }
+  if (!entry) return "Нет наблюдений за эти сутки.";
+  if (entry.valid && entry.v !== null) return "";
+  if (entry.cov > 0 && entry.cov < entry.threshold) return `Сутки неполные: ${entry.cov} из ${entry.threshold} сроков.`;
+  if (entry.n > 0) return `Сутки неполные: ${entry.n} сроков из ${entry.threshold}.`;
+  return "Нет наблюдений за эти сутки.";
+}
+
+function unusableReason(entries) {
+  const start = iso(state.from);
+  const end = iso(state.to);
+  if (state.metric === "wind_dir") {
+    const block = windDirectionBlock(start, end);
+    if (block) return block;
+  }
+  if (!entries.length) return "В выбранном периоде нет пригодных суток.";
+  const reasons = new Set(entries.map(entry => dayStatusText(entry, entry.d)).filter(Boolean));
+  if (reasons.size === 1) return [...reasons][0];
+  return "В выбранном периоде нет пригодных суток.";
+}
+
+function dailyPoints() {
+  const days = seriesData().days || [];
+  const out = [];
+  for (let index = state.from; index <= state.to && index < days.length; index += 1) {
+    const entry = days[index];
+    out.push({
+      key: entry.d,
+      year: Number(entry.d.slice(0, 4)),
+      month: Number(entry.d.slice(5, 7)),
+      start: index,
+      end: index,
+      label: axisDate.format(dateAt(index)),
+      value: entry.valid ? entry.v : null,
+      q10: null,
+      q90: null,
+      anomaly: null,
+      partial: false,
+      usable: !!entry.valid,
+      entry
+    });
+  }
+  return out;
+}
+
+function showPlotEmpty(id, message) {
+  const canvas = get(id);
+  if (canvas && canvas.getContext) {
+    const box = canvas.getBoundingClientRect();
+    if (box.width > 0 && box.height > 0) {
+      const { ctx, width, height } = context(canvas);
+      ctx.clearRect(0, 0, width, height);
+    }
+    canvas._frame = null;
+    canvas._rows = [];
+  }
+  const note = get(`${id}-empty`);
+  if (note) { note.hidden = false; note.textContent = message; }
+}
+
+function hidePlotEmpty(id) {
+  const note = get(`${id}-empty`);
+  if (note) note.hidden = true;
 }
 
 function renderStats() {
@@ -204,18 +401,18 @@ function renderStats() {
   const mean = values.length && state.metric !== "wind_dir" ? average(values.map(item => item.value)) : null;
   const low = values.length && state.metric !== "wind_dir" ? Math.min(...values.map(item => item.value)) : null;
   const high = values.length && state.metric !== "wind_dir" ? Math.max(...values.map(item => item.value)) : null;
-  const trend = state.view === "series" && state.metric !== "wind_dir" ? monthTrend(shown, state.trendMonth) : { slope: null };
+  const trend = state.view === "series" && state.metric !== "wind_dir" ? monthTrend(monthShown, state.trendMonth) : { slope: null };
   const cards = [
     ["mean", "Средняя", text(state.metric === "wind_dir" ? null : mean)],
     ["low", "Мин.", text(low)],
     ["high", "Макс.", text(high)],
-    ["trend", "Тренд мес.", trend.slope !== null && trend.slope !== undefined ? `${trend.slope > 0 ? "+" : ""}${format.format(trend.slope)} ${unit()}/год` : "—"],
+    ["trend", "Тренд мес.", trend.slope !== null && trend.slope !== undefined ? `${trend.slope > 0 ? "+" : ""}${format.format(trend.slope)} ${unit()}/год` : "нет"],
     ["years", "Лет в расчёте", years.size ? `${years.size} ${yearsWord(years.size)}` : "0"]
   ];
   get("stats").innerHTML = cards.map(([kind, label, value]) =>
     `<article class="stat">${statIcon(kind)}<div><p>${label}</p><strong>${value}</strong></div></article>`
   ).join("");
-  const april = state.station === "kr1" && state.metric === "pressure_hpa" && shown.some(item => item.key === "2024-04" && item.value === null);
+  const april = state.station === "kr1" && state.metric === "pressure_hpa" && monthShown.some(item => item.key === "2024-04" && item.value === null);
   get("side-note").textContent = april
     ? "Апрель 2024 у Кр1 не входит в месячное давление: 2/30 пригодных суток, 28 неполных подряд."
     : "Отклонение от среднего того же месяца по всем годам станции. Не норма ВМО. Ряды не соединяются.";
@@ -252,7 +449,7 @@ function drawSeries(canvas, items, options) {
   const x = index => pad.left + (items.length <= 1 ? plotWidth / 2 : index / (items.length - 1) * plotWidth);
   const y = value => pad.top + (1 - (value - low) / (high - low)) * plotHeight;
   ctx.clearRect(0, 0, width, height);
-  ctx.font = "12px Inter, sans-serif";
+  ctx.font = "12px 'Roboto Mono', monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = palette.muted;
@@ -265,15 +462,17 @@ function drawSeries(canvas, items, options) {
     ctx.stroke();
     ctx.fillText(format.format(value), pad.left - 8, y(value));
   }
+  ctx.font = "12px Inter, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   const step = Math.max(1, Math.ceil(items.length / 8));
   items.forEach((item, index) => {
     if (index % step && index !== items.length - 1) return;
-    ctx.fillText(String(item.year ?? item.label ?? ""), x(index), height - 8);
+    const caption = state.view === "series" && state.step === "day" ? (item.label || "") : String(item.year ?? item.label ?? "");
+    ctx.fillText(caption, x(index), height - 8);
   });
   if (options.zero && low < 0 && high > 0) {
-    ctx.strokeStyle = "rgba(228, 238, 243, 0.35)";
+    ctx.strokeStyle = "rgba(241, 246, 232, 0.35)";
     ctx.beginPath();
     ctx.moveTo(pad.left, y(0));
     ctx.lineTo(width - pad.right, y(0));
@@ -282,7 +481,7 @@ function drawSeries(canvas, items, options) {
   // пользовательские горизонтальные линии
   state.lines.forEach(line => {
     if (line.value === null || line.value === undefined) return;
-    ctx.strokeStyle = line.color || palette.gold;
+    ctx.strokeStyle = line.color || palette.warm;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(pad.left, y(Number(line.value)));
@@ -294,6 +493,7 @@ function drawSeries(canvas, items, options) {
     ctx.fillText(line.label || "", pad.left - 8, y(Number(line.value)) - 4);
   });
   options.draw(ctx, x, y, plotHeight, pad);
+  canvas._rows = items;
   return { x, y, pad, width, height, plotHeight };
 }
 
@@ -315,7 +515,7 @@ function plotItems(canvas, items, read, title, legend) {
   const frame = drawSeries(canvas, items, {
     scale: view,
     draw(ctx, x, y) {
-      ctx.strokeStyle = palette.teal;
+      ctx.strokeStyle = palette.accent;
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       let open = false;
@@ -354,7 +554,7 @@ function drawMonthTrend() {
     const ys = items.filter(i => i.value !== null).map(i => i.value);
     const xs = items.filter(i => i.value !== null).map(i => i.year);
     if (xs.length && frame) {
-      frame.ctx.strokeStyle = palette.gold;
+      frame.ctx.strokeStyle = palette.warm;
       frame.ctx.setLineDash([5, 4]);
       frame.ctx.beginPath();
       const line = year => trend.meanY + trend.slope * (year - trend.meanX);
@@ -382,7 +582,13 @@ function drawCompare() {
     const a = kr1ByDate.get(d.d), b = kr2ByDate.get(d.d);
     if (a !== null && a !== undefined && b !== null && b !== undefined) { groups.get(key).a.push(a); groups.get(key).b.push(b); }
   });
-  const items = [...groups.values()].map(g => ({
+  const rangeStart = iso(state.from);
+  const rangeEnd = iso(state.to);
+  const items = [...groups.values()].filter(g => {
+    const [y, m] = g.key.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return `${g.key}-01` >= rangeStart && `${g.key}-${String(lastDay).padStart(2, "0")}` <= rangeEnd;
+  }).map(g => ({
     ...g, kr1: g.a.length ? average(g.a) : null, kr2: g.b.length ? average(g.b) : null,
     value: g.a.length ? average(g.a) : null, diff: g.a.length ? average(g.a) - average(g.b) : null, shared: g.a.length
   }));
@@ -390,7 +596,7 @@ function drawCompare() {
   const frame = drawSeries(get("chart"), items, {
     scale: view,
     draw(ctx, x, y) {
-      [["kr1", palette.teal], ["kr2", palette.gold]].forEach(([key, color]) => {
+      [["kr1", palette.accent], ["kr2", palette.warm]].forEach(([key, color]) => {
         ctx.strokeStyle = color;
         ctx.lineWidth = 1.6;
         ctx.beginPath();
@@ -407,7 +613,7 @@ function drawCompare() {
   get("chart")._frame = frame;
   get("main-title").textContent = "Кр1 и Кр2, температура";
   get("main-legend").textContent = "разность по общим пригодным суткам обеих точек";
-  const temp = value => value === null || !Number.isFinite(value) ? "—" : `${formatFull.format(value)} °C`;
+  const temp = value => value === null || !Number.isFinite(value) ? "нет" : `${formatFull.format(value)} °C`;
   get("chart")._read = item => `${item.label}\nКр1 ${temp(item.kr1)}\nКр2 ${temp(item.kr2)}\nразность ${temp(item.diff)}\nобщих суток ${item.shared}`;
 }
 
@@ -448,12 +654,70 @@ async function downloadExcel() {
   }
 }
 
+function drawDaily() {
+  get("main-title").textContent = metrics[state.metric][0];
+  if (!shown.some(item => Number.isFinite(item.value))) {
+    showPlotEmpty("chart", unusableReason(shown.map(item => item.entry).filter(Boolean)));
+    get("main-legend").textContent = "Сутки без пригодного значения остаются в периоде и не рисуются.";
+    get("chart")._read = null;
+    return;
+  }
+  const frame = drawSeries(get("chart"), shown, {
+    scale: scale(shown, item => [item.value]),
+    draw(ctx, x, y) {
+      ctx.strokeStyle = palette.accent;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      let open = false;
+      shown.forEach((item, index) => {
+        if (!Number.isFinite(item.value)) { open = false; return; }
+        if (!open) { ctx.moveTo(x(index), y(item.value)); open = true; }
+        else ctx.lineTo(x(index), y(item.value));
+      });
+      ctx.stroke();
+      ctx.fillStyle = palette.accent;
+      shown.forEach((item, index) => {
+        if (!Number.isFinite(item.value)) return;
+        const prev = index > 0 && Number.isFinite(shown[index - 1].value);
+        const next = index + 1 < shown.length && Number.isFinite(shown[index + 1].value);
+        if (prev || next) return;
+        ctx.beginPath();
+        ctx.arc(x(index), y(item.value), 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+  });
+  get("chart")._frame = frame;
+  get("main-legend").textContent = "Среднее пригодных сроков каждых суток. Пропуски оставлены пустыми.";
+  get("chart")._read = item => {
+    const status = Number.isFinite(item.value) ? text(item.value) : dayStatusText(item.entry, item.entry.d);
+    const cov = item.entry ? `покрытие ${item.entry.cov}/${item.entry.threshold}` : "";
+    return `${item.entry ? item.entry.d : item.label}\n${status}\n${cov}`;
+  };
+}
+
 function drawMain() {
   get("trend-month-field").hidden = state.view !== "trend";
+  hidePlotEmpty("chart");
   if (state.view === "annual") return drawAnnual();
   if (state.view === "trend") return drawMonthTrend();
   if (state.view === "compare") return drawCompare();
   if (state.view === "dekad") return drawDekad();
+  if (state.step === "day") return drawDaily();
+  if (!shown.some(item => Number.isFinite(item.value))) {
+    const days = (seriesData().days || []).slice(state.from, state.to + 1);
+    let reason = "В периоде нет полного месяца с пригодным значением.";
+    const block = state.metric === "wind_dir" ? windDirectionBlock(iso(state.from), iso(state.to)) : "";
+    if (block) reason = block;
+    else if (days.length === 1) {
+      const one = dayStatusText(days[0], days[0].d);
+      reason = one || `${days[0].d}: ${text(days[0].v)}. Для шага «Месяцы» нужен полный календарный месяц.`;
+    }
+    showPlotEmpty("chart", reason);
+    get("main-title").textContent = metrics[state.metric][0];
+    get("main-legend").textContent = "Месяц попадает в график, только если период накрывает его целиком.";
+    return;
+  }
   const band = on("opt-band") && state.metric !== "wind_dir";
   const smooth = movingAverage(shown);
   const view = scale(shown, item => [item.value, band ? item.q10 : null, band ? item.q90 : null, on("opt-ma") ? smooth[shown.indexOf(item)] : null]);
@@ -466,12 +730,12 @@ function drawMain() {
           run.forEach((index, order) => order ? ctx.lineTo(x(index), y(shown[index].q90)) : ctx.moveTo(x(index), y(shown[index].q90)));
           for (let cursor = run.length - 1; cursor >= 0; cursor -= 1) ctx.lineTo(x(run[cursor]), y(shown[run[cursor]].q10));
           ctx.closePath();
-          ctx.fillStyle = "rgba(125, 206, 198, 0.18)";
+          ctx.fillStyle = "rgba(188, 237, 145, 0.22)";
           ctx.fill();
         });
       }
       ctx.lineWidth = 1.6;
-      ctx.strokeStyle = palette.teal;
+      ctx.strokeStyle = palette.accent;
       runs(shown, item => item.value).forEach(run => {
         ctx.beginPath();
         run.forEach((index, order) => order ? ctx.lineTo(x(index), y(shown[index].value)) : ctx.moveTo(x(index), y(shown[index].value)));
@@ -479,7 +743,7 @@ function drawMain() {
       });
       if (on("opt-ma")) {
         ctx.setLineDash([5, 4]);
-        ctx.strokeStyle = palette.gold;
+        ctx.strokeStyle = palette.warm;
         ctx.beginPath();
         let open = false;
         smooth.forEach((value, index) => {
@@ -506,22 +770,29 @@ function drawAnomaly() {
   const show = on("opt-anomaly") && state.metric !== "wind_dir";
   panel.hidden = !on("opt-anomaly");
   if (!show) {
+    hidePlotEmpty("anomaly");
     get("anomaly-caption").textContent = "Для направления круговое среднее не раскладывается на отклонения вверх и вниз.";
     return;
   }
-  get("anomaly-caption").textContent = "Столбец: месяц минус среднее этого же календарного месяца по всем годам станции. База — среднее за выбранный период, не норма ВМО.";
+  get("anomaly-caption").textContent = "Столбец: месяц минус среднее этого же календарного месяца по всем годам станции. База: среднее за выбранный период, не норма ВМО.";
+  if (!monthShown.length) {
+    showPlotEmpty("anomaly", "В периоде нет полного месяца.");
+    get("anomaly-legend").textContent = "";
+    return;
+  }
+  hidePlotEmpty("anomaly");
   get("anomaly-legend").innerHTML = [
     [palette.coral, "отклонение +"],
     [palette.blue, "отклонение -"]
   ].map(([color, name]) => `<span class="key"><i style="background:${color}"></i>${name}</span>`).join("");
-  const anomalies = shown.map(item => item.anomaly).filter(value => Number.isFinite(value));
+  const anomalies = monthShown.map(item => item.anomaly).filter(value => Number.isFinite(value));
   const span = anomalies.length ? Math.max(Math.abs(Math.min(...anomalies)), Math.abs(Math.max(...anomalies)), 1) : 1;
-  const frame = drawSeries(get("anomaly"), shown, {
+  const frame = drawSeries(get("anomaly"), monthShown, {
     scale: { low: -span * 1.15, high: span * 2.15 },
     gridLow: -span, gridHigh: span, zero: true,
     draw(ctx, x, y, plotHeight, pad) {
-      const width = Math.max(2, Math.abs(x(Math.min(1, shown.length - 1)) - x(0)) * 0.62);
-      shown.forEach((item, index) => {
+      const width = Math.max(2, Math.abs(x(Math.min(1, monthShown.length - 1)) - x(0)) * 0.62);
+      monthShown.forEach((item, index) => {
         if (item.anomaly === null) return;
         ctx.fillStyle = item.anomaly >= 0 ? palette.coral : palette.blue;
         const top = y(item.anomaly), base = y(0);
@@ -532,62 +803,131 @@ function drawAnomaly() {
   get("anomaly")._frame = frame;
 }
 
-// ---- роза ветров из срочных наблюдений (16 секторов + штиль + корзины скорости) ----
+function collectWind() {
+  const windDays = stationData().wind_days || {};
+  const bins = new Array(81).fill(0);
+  const start = iso(state.from);
+  const end = iso(state.to);
+  let any = false;
+  for (const [day, arr] of Object.entries(windDays)) {
+    if (day < start || day > end) continue;
+    any = true;
+    for (let i = 0; i < 81; i += 1) bins[i] += arr[i] || 0;
+  }
+  return { bins, any };
+}
+
+function roseExclusionNote() {
+  if (state.station !== "ame60") return "";
+  const start = iso(state.from);
+  const end = iso(state.to);
+  const bits = [];
+  if (start <= "1998-12-31" && end >= "1998-01-01") bits.push("1998 не входит: нет столбца направления");
+  if (start <= "2021-12-31" && end >= "2021-01-01") bits.push("2021 не входит: направление недостоверно");
+  return bits.join(". ");
+}
+
+function polar(cx, cy, radius, angle) {
+  return [cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius];
+}
+
+function sectorPath(cx, cy, r0, r1, a0, a1) {
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const [x0, y0] = polar(cx, cy, r1, a0);
+  const [x1, y1] = polar(cx, cy, r1, a1);
+  if (r0 < 1) return `M ${cx} ${cy} L ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r1.toFixed(2)} ${r1.toFixed(2)} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+  const [x2, y2] = polar(cx, cy, r0, a1);
+  const [x3, y3] = polar(cx, cy, r0, a0);
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r1.toFixed(2)} ${r1.toFixed(2)} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} L ${x2.toFixed(2)} ${y2.toFixed(2)} A ${r0.toFixed(2)} ${r0.toFixed(2)} 0 ${large} 0 ${x3.toFixed(2)} ${y3.toFixed(2)} Z`;
+}
+
+// ---- роза ветров: те же корзины, рисунок из SVG, чтобы круг не растягивался ----
 function drawRose() {
   const panel = get("rose-panel");
   panel.hidden = !on("opt-rose");
   if (panel.hidden) return;
-  const windDays = stationData().wind_days || {};
-  const bins = new Array(81).fill(0);
-  const start = dateAt(state.from).toISOString().slice(0, 10);
-  const end = dateAt(state.to).toISOString().slice(0, 10);
-  let any = false;
-  for (const [d, arr] of Object.entries(windDays)) {
-    if (d < start || d > end) continue;
-    any = true;
-    for (let i = 0; i < 81; i += 1) bins[i] += arr[i];
-  }
+  const svg = get("rose");
+  const frame = svg.closest(".rose-frame");
+  const legend = get("rose-legend");
+  const table = get("rose-table");
+  const empty = get("rose-empty");
+  const block = windDirectionBlock(iso(state.from), iso(state.to));
+  const { bins, any } = collectWind();
   const calm = bins[0];
-  const directional = bins.slice(1).reduce((s, v) => s + v, 0);
+  const directional = bins.slice(1).reduce((sum, value) => sum + value, 0);
   const total = calm + directional;
-  const unavailable = state.station === "ame60" && state.from <= dayIndex("1998-12-31") && state.to >= dayIndex("1998-01-01");
-  const unavailable21 = state.station === "ame60" && state.from <= dayIndex("2021-12-31") && state.to >= dayIndex("2021-01-01");
-  if (!any && !total) {
-    get("rose-note").textContent = unavailable || unavailable21
-      ? `Роза не строится: ${unavailable ? "в 1998 направление не измерялось" : ""}${unavailable && unavailable21 ? "; " : ""}${unavailable21 ? "в 2021 направление недостоверно" : ""}.`
-      : "В этом окне нет пригодных срочных данных ветра.";
-    const { ctx, width, height } = context(get("rose"));
-    ctx.clearRect(0, 0, width, height);
+  const paintLegend = () => {
+    legend.innerHTML = speedBins.map((label, index) =>
+      `<li><i style="background:${palette.speeds[index]}"></i><span>${label}</span></li>`
+    ).join("") + `<li><i class="calm-swatch"></i><span>штиль, 0 м/с</span></li>`;
+  };
+  const paintTable = () => {
+    const head = `<thead><tr><th>Сектор</th>${speedBins.map(label => `<th>${label}</th>`).join("")}<th>Итого</th></tr></thead>`;
+    const body = sectorNames.map((name, sector) => {
+      const counts = [0, 1, 2, 3, 4].map(bin => bins[1 + sector * 5 + bin]);
+      const sum = counts.reduce((acc, value) => acc + value, 0);
+      return `<tr><td>${name}</td>${counts.map(value => `<td>${value}</td>`).join("")}<td>${sum}</td></tr>`;
+    }).join("");
+    table.innerHTML = `${head}<tbody>${body}<tr><td>штиль</td><td colspan="5">0 м/с</td><td>${calm}</td></tr></tbody>`;
+  };
+  if (block || !any || !total) {
+    svg.textContent = "";
+    legend.innerHTML = "";
+    table.innerHTML = "";
+    if (frame) frame.hidden = true;
+    get("rose-note").textContent = "";
+    empty.hidden = false;
+    empty.textContent = block || "В этом окне нет пригодных срочных данных ветра.";
     return;
   }
-  get("rose-note").textContent = `Пригодных срочных наблюдений: ${total}. Штиль: ${calm} (${format.format(100 * calm / total)}%). Знаменатель включает штиль.`;
-  const { ctx, width, height } = context(get("rose"));
-  ctx.clearRect(0, 0, width, height);
-  const cx = width / 2, cy = height / 2 + 6;
-  const radius = Math.min(width, height) * 0.36;
-  const max = Math.max(...bins.slice(1), 1);
-  ctx.strokeStyle = palette.line;
-  ctx.fillStyle = palette.muted;
-  ctx.font = "12px Inter, sans-serif";
-  ctx.textAlign = "center";
-  for (let ring = 1; ring <= 3; ring += 1) {
-    ctx.beginPath(); ctx.arc(cx, cy, radius * ring / 3, 0, Math.PI * 2); ctx.stroke();
-  }
-  for (let sector = 0; sector < 16; sector += 1) {
+  if (frame) frame.hidden = false;
+  empty.hidden = true;
+  paintLegend();
+  paintTable();
+  const excluded = roseExclusionNote();
+  const calmOnly = directional === 0;
+  get("rose-note").textContent = calmOnly
+    ? `Только штиль: ${calm}. Ненулевых направлений нет. Штиль считается при 0 м/с.${excluded ? " " + excluded + "." : ""}`
+    : `Пригодных срочных наблюдений: ${total}. Штиль: ${calm} (${format.format(100 * calm / total)}%). Знаменатель включает штиль.${excluded ? " " + excluded + "." : ""}`;
+  const cx = 200;
+  const cy = 200;
+  const radius = 132;
+  const sectorTotals = Array.from({ length: 16 }, (_, sector) => {
     let count = 0;
-    for (let b = 0; b < 5; b += 1) count += bins[1 + sector * 5 + b];
-    const angle = (sector + 0.5) * Math.PI / 8 - Math.PI / 2;
-    ctx.fillStyle = "rgba(125, 206, 198, 0.75)";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, radius * count / max, angle - 0.16, angle + 0.16);
-    ctx.closePath();
-    ctx.fill();
-  }
-  [["С", 0, -radius - 14], ["В", radius + 14, 4], ["Ю", 0, radius + 18], ["З", -radius - 14, 4]].forEach(([label, dx, dy]) => {
-    ctx.fillStyle = palette.ink;
-    ctx.fillText(label, cx + dx, cy + dy);
+    for (let bin = 0; bin < 5; bin += 1) count += bins[1 + sector * 5 + bin];
+    return count;
   });
+  const max = Math.max(...sectorTotals, 1);
+  const parts = [`<g fill="none" stroke="#3B5547" stroke-width="1">`];
+  for (let ring = 1; ring <= 3; ring += 1) {
+    const r = radius * ring / 3;
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r.toFixed(2)}"></circle>`);
+  }
+  parts.push(`<path d="M ${cx} ${cy - radius} V ${cy + radius} M ${cx - radius} ${cy} H ${cx + radius}"></path></g>`);
+  if (!calmOnly) {
+    for (let ring = 1; ring <= 3; ring += 1) {
+      const r = radius * ring / 3;
+      const value = Math.round(max * ring / 3);
+      parts.push(`<text class="tick" x="${cx + 8}" y="${(cy - r + 4).toFixed(1)}" font-size="11" text-anchor="start">${value}</text>`);
+    }
+    for (let sector = 0; sector < 16; sector += 1) {
+      const angle = (sector + 0.5) * Math.PI / 8 - Math.PI / 2;
+      let acc = 0;
+      for (let bin = 0; bin < 5; bin += 1) {
+        const count = bins[1 + sector * 5 + bin];
+        if (!count) continue;
+        const r0 = radius * acc / max;
+        acc += count;
+        const r1 = radius * acc / max;
+        parts.push(`<path d="${sectorPath(cx, cy, r0, r1, angle - 0.16, angle + 0.16)}" fill="${palette.speeds[bin]}"></path>`);
+      }
+    }
+  } else {
+    parts.push(`<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="14">штиль</text>`);
+  }
+  [["С", cx, cy - radius - 18], ["В", cx + radius + 18, cy + 5], ["Ю", cx, cy + radius + 24], ["З", cx - radius - 18, cy + 5]]
+    .forEach(([label, x, y]) => parts.push(`<text x="${x}" y="${y}" text-anchor="middle" font-size="14">${label}</text>`));
+  svg.innerHTML = parts.join("");
 }
 
 // ---- почва: три слоя ----
@@ -632,14 +972,42 @@ function drawSoil() {
   });
 }
 
-function drawTimeline() {
+function selectionBox(width) {
+  const last = Math.max(1, lastIndex());
+  let left = state.from / last * width;
+  let right = state.to / last * width;
+  if (right - left < 18) {
+    const mid = (left + right) / 2;
+    left = Math.max(0, mid - 9);
+    right = Math.min(width, left + 18);
+  }
+  return { left, right, last };
+}
+
+function pointerZone(x, left, right) {
+  if (right - left < 36) {
+    const mid = (left + right) / 2;
+    if (x < mid - 8) return "start";
+    if (x > mid + 8) return "end";
+    return "move";
+  }
+  if (x >= left - 8 && x <= left + 16) return "start";
+  if (x >= right - 16 && x <= right + 8) return "end";
+  if (x > left && x < right) return "move";
+  return "";
+}
+
+function paintOverview() {
   const series = (seriesData().days || []).map(row => row.v);
-  const { ctx, width, height } = context(get("overview"));
+  const canvas = get("overview");
+  const box = canvas.getBoundingClientRect();
+  if (box.width < 2 || box.height < 2) return;
+  const { ctx, width, height } = context(canvas);
   ctx.clearRect(0, 0, width, height);
   const values = series.filter(value => value !== null && state.metric !== "wind_dir");
   if (values.length && state.metric !== "wind_dir") {
     const low = Math.min(...values), high = Math.max(...values);
-    ctx.strokeStyle = palette.teal;
+    ctx.strokeStyle = palette.accent;
     ctx.lineWidth = 1;
     ctx.beginPath();
     let open = false;
@@ -652,42 +1020,92 @@ function drawTimeline() {
     });
     ctx.stroke();
   }
-  const span = Math.max(1, seriesData().days.length - 1);
-  const left = state.from / span * width;
-  const right = state.to / span * width;
-  get("selection").style.left = `${left}px`;
-  get("selection").style.width = `${Math.max(2, right - left)}px`;
-  get("window-label").textContent = `${monthName.format(dateAt(state.from))} — ${monthName.format(dateAt(state.to))}`;
+}
+
+function placeSelection() {
+  const width = get("brush").clientWidth || 1;
+  const box = selectionBox(width);
+  const sel = get("selection");
+  sel.style.left = `${box.left}px`;
+  sel.style.width = `${Math.max(0, box.right - box.left)}px`;
+  const grain = state.view === "series" && state.step === "day" ? ", сутки" : "";
+  get("window-label").textContent = `${longDate.format(dateAt(state.from))} - ${longDate.format(dateAt(state.to))}${grain}`;
+}
+
+function drawTimeline() {
+  if (!brushDrag) paintOverview();
+  placeSelection();
 }
 
 function tip(canvas, event, id, read) {
   const frame = canvas._frame;
+  const rows = canvas._rows || [];
   const box = get(id);
-  if (!frame || !shown.length) { box.hidden = true; return; }
+  if (!frame || !rows.length) { box.hidden = true; return; }
   const local = event.clientX - canvas.getBoundingClientRect().left;
   let nearest = 0, best = Infinity;
-  shown.forEach((_, index) => {
+  rows.forEach((_, index) => {
     const distance = Math.abs(frame.x(index) - local);
     if (distance < best) { best = distance; nearest = index; }
   });
   state.focus = nearest;
-  const item = shown[nearest];
+  const item = rows[nearest];
   box.hidden = false;
   box.textContent = read(item);
   box.style.left = `${Math.max(8, Math.min(frame.width - 180, frame.x(nearest) + 8))}px`;
 }
 
+function renderTable() {
+  const panel = get("table-panel");
+  const body = get("records");
+  if (!panel || !body || !panel.open) return;
+  const rows = (state.view === "series" && state.step === "day" ? shown : monthShown);
+  const visible = rows.slice(0, 500);
+  body.innerHTML = visible.map(item => {
+    const coverage = item.entry ? `${item.entry.cov}/${item.entry.threshold}` : (item.coverage || "");
+    const status = Number.isFinite(item.value) ? "в расчёте" : (item.entry ? dayStatusText(item.entry, item.entry.d) : (item.partial ? "месяц неполный" : "нет пригодных суток"));
+    return `<tr><td>${item.label || item.key || ""}</td><td>${text(item.value)}</td><td>${coverage}</td><td>${status}</td></tr>`;
+  }).join("") || `<tr><td colspan="4">В периоде нет строк.</td></tr>`;
+  if (rows.length > visible.length) body.insertAdjacentHTML("beforeend", `<tr><td colspan="4">Показаны первые 500 строк периода.</td></tr>`);
+}
+
+function syncDateFields() {
+  if (editingDates) return;
+  clearDateErrors();
+  const start = get("date-start");
+  const end = get("date-end");
+  const a = iso(state.from);
+  const b = iso(state.to);
+  if (start.value !== a) start.value = a;
+  if (end.value !== b) end.value = b;
+}
+
 function update() {
   months = buildMonths();
-  shown = months.filter(inWindow);
+  monthShown = months.filter(inWindow);
+  shown = state.view === "series" && state.step === "day" ? dailyPoints() : monthShown;
+  document.querySelectorAll("[data-step]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.step === state.step));
+  });
+  const note = get("range-note");
+  if (note) {
+    const span = `${longDate.format(dateAt(state.from))} - ${longDate.format(dateAt(state.to))}`;
+    const grain = state.view === "series" ? (state.step === "day" ? "шаг: сутки" : "шаг: месяцы") : "";
+    note.textContent = state.clipNote || (grain ? `${span}, ${grain}` : span);
+  }
+  syncMenus();
+  syncDateFields();
   get("range-start").value = state.from;
   get("range-end").value = state.to;
+  get("range-start").setAttribute("aria-valuetext", longDate.format(dateAt(state.from)));
+  get("range-end").setAttribute("aria-valuetext", longDate.format(dateAt(state.to)));
   renderStats();
   drawMain();
   drawAnomaly();
   drawRose();
   drawSoil();
   drawTimeline();
+  renderTable();
 }
 
 function applyPreset(name) {
@@ -721,7 +1139,7 @@ function applyTemplate(name) {
   }
   if (name === "temprh") {
     state.metric = "t_air"; setStation("kr1"); state.view = "series"; get("view").value = "series";
-    get("side-note").textContent = "Влажность — отдельный показатель (выберите «Относительная влажность» в меню).";
+    get("side-note").textContent = "Влажность: отдельный показатель. Выберите «Относительная влажность» в меню.";
     update();
   }
 }
@@ -729,12 +1147,112 @@ function applyTemplate(name) {
 function bootControls() {
   get("stations").addEventListener("click", event => {
     const button = event.target.closest("[data-station]");
-    if (button) setStation(button.dataset.station);
+    if (button && button.dataset.station !== state.station) setStation(button.dataset.station, { keep: true });
   });
   get("metric").addEventListener("change", () => { state.metric = get("metric").value; update(); });
   ["opt-ma", "opt-band", "opt-anomaly", "opt-rose", "opt-soil"].forEach(id => get(id).addEventListener("change", update));
-  get("range-start").addEventListener("input", () => { state.from = Math.min(Number(get("range-start").value), state.to); update(); });
-  get("range-end").addEventListener("input", () => { state.to = Math.max(Number(get("range-end").value), state.from); update(); });
+  get("range-start").addEventListener("input", () => {
+    editingDates = false;
+    state.clipNote = "";
+    state.from = Math.min(Number(get("range-start").value), state.to);
+    update();
+  });
+  get("range-end").addEventListener("input", () => {
+    editingDates = false;
+    state.clipNote = "";
+    state.to = Math.max(Number(get("range-end").value), state.from);
+    update();
+  });
+  ["date-start", "date-end"].forEach(id => {
+    const field = get(id);
+    field.addEventListener("focus", () => { editingDates = true; });
+    field.addEventListener("change", applyDatesFromFields);
+    field.addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      applyDatesFromFields();
+    });
+  });
+  get("apply-range").addEventListener("click", event => {
+    event.preventDefault();
+    applyDatesFromFields();
+  });
+  document.querySelectorAll("[data-step]").forEach(button => button.addEventListener("click", () => {
+    state.step = button.dataset.step;
+    state.view = "series";
+    get("view").value = "series";
+    update();
+  }));
+  get("table-panel").addEventListener("toggle", renderTable);
+  const brush = get("brush");
+  const brushCursor = clientX => {
+    const rect = brush.getBoundingClientRect();
+    if (rect.width < 2) return;
+    const box = selectionBox(rect.width);
+    const mode = pointerZone(clientX - rect.left, box.left, box.right);
+    brush.classList.toggle("is-resize", mode === "start" || mode === "end");
+    brush.classList.toggle("is-move", mode === "move");
+  };
+  brush.addEventListener("pointermove", event => {
+    if (brushDrag) return;
+    brushCursor(event.clientX);
+  });
+  brush.addEventListener("pointerleave", () => {
+    if (brushDrag) return;
+    brush.classList.remove("is-resize", "is-move");
+  });
+  brush.addEventListener("pointerdown", event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    const rect = brush.getBoundingClientRect();
+    if (rect.width < 2) return;
+    const box = selectionBox(rect.width);
+    const mode = pointerZone(event.clientX - rect.left, box.left, box.right);
+    if (!mode) return;
+    brush.classList.toggle("is-resize", mode === "start" || mode === "end");
+    brush.classList.toggle("is-move", mode === "move");
+    brushDrag = {
+      mode,
+      pointer: event.pointerId,
+      originX: event.clientX,
+      originFrom: state.from,
+      originTo: state.to,
+      width: rect.width,
+      last: box.last
+    };
+    editingDates = false;
+    brush.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  brush.addEventListener("pointermove", event => {
+    if (!brushDrag || event.pointerId !== brushDrag.pointer) return;
+    const delta = Math.round((event.clientX - brushDrag.originX) / brushDrag.width * brushDrag.last);
+    const last = brushDrag.last;
+    if (brushDrag.mode === "start") {
+      state.from = Math.max(0, Math.min(brushDrag.originTo, brushDrag.originFrom + delta));
+      state.to = brushDrag.originTo;
+    } else if (brushDrag.mode === "end") {
+      state.to = Math.min(last, Math.max(brushDrag.originFrom, brushDrag.originTo + delta));
+      state.from = brushDrag.originFrom;
+    } else {
+      const dur = brushDrag.originTo - brushDrag.originFrom;
+      let from = brushDrag.originFrom + delta;
+      let to = from + dur;
+      if (from < 0) { from = 0; to = dur; }
+      if (to > last) { to = last; from = Math.max(0, last - dur); }
+      state.from = from;
+      state.to = to;
+    }
+    state.clipNote = "";
+    update();
+  });
+  const endBrush = event => {
+    if (!brushDrag || (event && event.pointerId !== brushDrag.pointer)) return;
+    brushDrag = null;
+    if (event && Number.isFinite(event.clientX)) brushCursor(event.clientX);
+    update();
+  };
+  brush.addEventListener("pointerup", endBrush);
+  brush.addEventListener("pointercancel", endBrush);
   get("view").addEventListener("change", () => { state.view = get("view").value; update(); });
   get("trend-month").addEventListener("change", () => { state.trendMonth = Number(get("trend-month").value); update(); });
   get("excel").addEventListener("click", downloadExcel);
@@ -743,7 +1261,7 @@ function bootControls() {
   // горизонтальные линии
   get("line-value").addEventListener("change", () => {
     const value = parseFloat(get("line-value").value);
-    state.lines = value === value ? [{ value, label: get("line-label").value || String(value), color: palette.gold }] : [];
+    state.lines = value === value ? [{ value, label: get("line-label").value || String(value), color: palette.warm }] : [];
     update();
   });
   // журнал исключений
@@ -785,18 +1303,29 @@ function bootControls() {
   get("chart").addEventListener("pointermove", event => tip(get("chart"), event, "chart-tip", item =>
     get("chart")._read ? get("chart")._read(item) : `${item.label}\n${text(item.value)}`));
   get("anomaly").addEventListener("pointermove", event => tip(get("anomaly"), event, "anomaly-tip", item =>
-    `${item.label}\nмесяц ${text(item.value)}\nотклонение ${item.anomaly === null ? "—" : text(item.anomaly)}`));
+    `${item.label}\nмесяц ${text(item.value)}\nотклонение ${item.anomaly === null ? "нет" : text(item.anomaly)}`));
   ["chart", "anomaly"].forEach(id => get(id).addEventListener("pointerleave", () => { get(`${id === "chart" ? "chart" : "anomaly"}-tip`).hidden = true; }));
   document.addEventListener("click", event => {
     if (event.target.closest && event.target.closest(".menu")) return;
     document.querySelectorAll(".menu-list").forEach(node => { node.hidden = true; });
   });
-  new ResizeObserver(update).observe(get("chart"));
+  const observer = new ResizeObserver(() => update());
+  observer.observe(get("chart"));
+  observer.observe(get("brush"));
 }
 
 fetch("/landing/dashboard/series.json").then(response => response.json()).then(payload => {
   data = payload;
   bootControls();
-  const asked = new URLSearchParams(location.search).get("station");
-  setStation(["ame60", "kr1", "kr2"].includes(asked) ? asked : "ame60");
+  bindMenu(get("view"));
+  bindMenu(get("trend-month"));
+  const query = new URLSearchParams(location.search);
+  const asked = query.get("station");
+  const station = ["ame60", "kr1", "kr2"].includes(asked) ? asked : "ame60";
+  setStation(station, { metric: query.get("metric") || "" });
+  const qStart = query.get("start");
+  const qEnd = query.get("end");
+  const date = query.get("date");
+  if (qStart && qEnd) applyQueryRange(qStart, qEnd, false);
+  else if (date) applyQueryRange(date, date, true);
 }).catch(() => { get("stats").textContent = "Архив не открылся."; });

@@ -1,18 +1,254 @@
-@font-face { font-family: Unbounded; src: url("/fonts/Unbounded-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-@font-face { font-family: Inter; src: url("/fonts/Inter_24pt-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Roboto Mono"; src: url("/fonts/RobotoMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-:root { color-scheme: dark; --bg:#101c27; --ink:#e7f1f6; --muted:#93a9b6; --line:rgba(190,220,230,.16); --teal:#7dcec6; }
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; overflow: hidden; background: #0c241c; color: var(--ink); font: 15px/1.4 Inter, sans-serif; }
-.bar { height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 18px; background: #10281f; border-bottom: 1px solid rgba(125,206,198,.2); }
-.brand, .back { color: var(--muted); text-decoration: none; font: 13px/1 "Roboto Mono", monospace; }
-h1 { margin: 0; font: 500 22px/1 Unbounded, sans-serif; }
-.stage { position: relative; height: calc(100% - 86px); }
-#map { display: block; width: 100%; height: 100%; cursor: grab; }
-.card { position: absolute; width: min(280px, calc(100% - 24px)); padding: 12px; background: #132430; border: 1px solid var(--line); border-radius: 14px; }
-.eyebrow { margin: 0; color: var(--teal); font: 12px/1.3 "Roboto Mono", monospace; }
-.card h2 { margin: 6px 0; font: 500 22px/1.1 Unbounded, sans-serif; }
-.card p, .credit { color: var(--muted); }
-.note { font-size: 13px; }
-.go { display: inline-block; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--teal); color: var(--teal); text-decoration: none; font: 13px/1 "Roboto Mono", monospace; }
-.credit { margin: 0; height: 28px; padding: 6px 18px; font-size: 12px; }
+.reserve-map {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 64px);
+  min-height: 520px;
+  background: #101E19;
+  color: #F1F6E8;
+}
+
+.map-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #192D25;
+}
+
+.map-bar button,
+.date-field input,
+.phone-list a,
+.label,
+.tip {
+  font-family: "Roboto Mono", monospace;
+}
+
+.map-bar button,
+.date-field input {
+  border: 1px solid #3E5549;
+  background: #101E19;
+  color: #F1F6E8;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.map-bar button { cursor: pointer; }
+
+.map-bar button:disabled {
+  color: #6d7f74;
+  cursor: default;
+}
+
+.map-bar button:focus-visible,
+.date-field input:focus-visible,
+.markers button:focus-visible,
+.tip a:focus-visible,
+.phone-list a:focus-visible {
+  outline: 2px solid #BCED91;
+  outline-offset: 2px;
+}
+
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ACC0B0;
+  font-family: "Roboto Mono", monospace;
+  font-size: 13px;
+}
+
+.map-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+#map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  background: #07080c;
+}
+
+.north {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  margin: 0;
+  color: #F1F6E8;
+  font-family: "Roboto Mono", monospace;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.legend {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #F1F6E8;
+  font-family: "Roboto Mono", monospace;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.legend .ramp {
+  width: 112px;
+  height: 8px;
+  background: linear-gradient(90deg, #31483c, #BCED91);
+}
+
+.map-notes {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  max-width: min(420px, calc(100% - 28px));
+  margin: 0;
+  color: #ACC0B0;
+  font-family: Inter, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.map-notes p { margin: 0 0 4px; }
+
+.markers { position: absolute; inset: 0; pointer-events: none; }
+
+.mark {
+  position: absolute;
+  width: 28px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.mark svg { display: block; width: 28px; height: 36px; }
+
+.mark .pin-body { fill: #d7e7c8; }
+
+.mark .pin-well { fill: #14261a; }
+
+.mark .pin-vane {
+  fill: none;
+  stroke: #d7e7c8;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.mark:hover .pin-body,
+.mark.is-open .pin-body { fill: #f0c36a; }
+
+.mark:hover .pin-vane,
+.mark.is-open .pin-vane { stroke: #f0c36a; }
+
+.mark.is-dim .pin-body { fill: #6a7b72; }
+
+.mark.is-dim .pin-vane { stroke: #6a7b72; }
+
+.mark.is-dim:hover .pin-body,
+.mark.is-dim.is-open .pin-body { fill: #e7c98a; }
+
+.mark.is-dim:hover .pin-vane,
+.mark.is-dim.is-open .pin-vane { stroke: #e7c98a; }
+
+.tip {
+  position: absolute;
+  z-index: 4;
+  width: min(240px, calc(100% - 16px));
+  padding: 8px 10px;
+  background: #192D25;
+  border: 1px solid #3E5549;
+  color: #F1F6E8;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: auto;
+}
+
+.tip a.goto {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid #bced91;
+  background: #bced91;
+  color: #14261a;
+  text-decoration: none;
+}
+
+.tip p { margin: 0 0 3px; }
+
+.tip p:last-child { margin: 0; }
+
+.phone-list {
+  display: none;
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 78px;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phone-list a {
+  display: block;
+  padding: 8px;
+  background: #192D25;
+  border: 1px solid #3E5549;
+  color: #F1F6E8;
+  font-size: 12px;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+body.home {
+  background: #07080c;
+  color: #f4f6f1;
+}
+
+body.home .reserve-map {
+  height: auto;
+  min-height: 0;
+  margin: 28px 0 8px;
+  background: #07080c;
+}
+
+body.home .map-stage {
+  height: 420px;
+  flex: none;
+  border: 1px solid rgba(244, 246, 241, 0.16);
+  background: #07080c;
+}
+
+body.home .map-notes { display: none; }
+
+body.home .map-bar {
+  background: #10140f;
+}
+
+body.home .map-bar button,
+body.home .date-field input {
+  background: #07080c;
+  color: #f4f6f1;
+  border-color: rgba(244, 246, 241, 0.16);
+}
+
+@media (max-width: 760px) {
+  .reserve-map { height: auto; min-height: 0; }
+  .map-stage { height: 72dvh; min-height: 420px; flex: none; }
+  .phone-list { display: grid; grid-template-columns: 1fr; }
+  .map-notes { bottom: 148px; }
+}

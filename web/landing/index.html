@@ -3,76 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Полевой журнал</title>
-  <link rel="stylesheet" href="/landing/landing.css">
+  <title>главная</title>
+  <link rel="stylesheet" href="/landing/landing.css?v=9">
+  <link rel="stylesheet" href="/landing/map/map.css?v=9">
 </head>
-<body>
-  <canvas id="ascii-field" aria-hidden="true"></canvas>
-  <div class="intro" id="intro">
-    <canvas id="intro-source"></canvas>
-    <div id="intro-content" class="intro-fallback">
-      <p class="intro-kicker">ЦУ</p>
-      <p class="intro-title">Полевой журнал</p>
-      <p class="intro-sub">Центрально-Лесной заповедник</p>
-    </div>
-    <canvas id="intro-output"></canvas>
-    <p class="intro-hint">нажмите, чтобы открыть</p>
+<body class="home">
+  <canvas id="ascii-field" class="cursor-trail" aria-hidden="true"></canvas>
+  <div class="field-ornament" aria-hidden="true">
+    <img class="spruce" src="/assets/spruce-tip.png" alt="">
+    <img class="contour" src="/assets/contour-lines.png" alt="">
+    <img class="leaf-mint" src="/assets/leaf-mint.png" alt="">
+    <img class="leaf-outline" src="/assets/leaf-outline.png" alt="">
+    <img class="leaf-sage" src="/assets/leaf-sage.png" alt="">
+    <img class="shadow" src="/assets/forest-shadow.png" alt="">
   </div>
-
   <header class="nav">
     <a class="brand" href="/landing">
       <img src="/assets/cu-mark.png?v=2" alt="ЦУ" width="88" height="64">
-      <span>Полевой журнал</span>
+      <h1>главная</h1>
     </a>
     <nav aria-label="Страницы">
-      <a href="#rows">Станции</a>
-      <a href="#limits">Ограничения</a>
-      <a href="#team">Команда</a>
-      <a href="/landing/map">Карта</a>
-      <a href="/landing/dashboard">Архив</a>
+      <a class="archive-link" href="/landing/dashboard">Архив</a>
     </nav>
   </header>
 
   <main>
-    <section class="hero">
-      <div>
-        <h1>Полевой журнал</h1>
-        <p class="lede">Центрально-Лесной заповедник, урочище Красное. АМЕ-60 и Сокол стоят в разных точках и в разные годы, ряды не соединяются.</p>
-        <a class="go" href="/landing/map">Карта станций</a>
+    <section class="reserve-map" id="reserve-map" aria-label="Карта заповедника">
+      <div class="map-bar">
+        <a class="archive-link" href="/landing/dashboard">Архив</a>
+        <label class="date-field" for="map-date">
+          <input id="map-date" type="date" aria-label="День архива">
+        </label>
+        <button type="button" id="map-prev">Предыдущий день</button>
+        <button type="button" id="map-next">Следующий день</button>
+        <button type="button" id="map-motion" aria-pressed="true">Пауза</button>
+        <button type="button" id="map-frame">К станциям</button>
+        <button type="button" id="map-nearest" hidden>Ближайший день с потоком</button>
       </div>
-      <aside class="hole">
-        <p>Дыра АМЕ-60 с 4 января 1999 по 17 августа 2003. Файлов за 2000, 2001 и 2002 нет.</p>
-      </aside>
+      <div class="map-stage" id="map-stage">
+        <canvas id="map" aria-hidden="true"></canvas>
+        <p class="north">север</p>
+        <div class="legend" id="map-legend"></div>
+        <div class="map-notes">
+          <p>Станции стоят схематично: координат в архиве нет. Кр1, поляна и Кр2, поле - соседние участки.</p>
+          <p>Поток схематично показан по архивным наблюдениям станций.</p>
+        </div>
+        <div class="markers" id="map-markers"></div>
+        <div class="tip" id="map-tip" role="tooltip" hidden></div>
+        <ul class="phone-list" id="map-phone" aria-label="Станции"></ul>
+      </div>
     </section>
 
-    <section class="block" id="rows">
-      <h2>Станции</h2>
-      <table>
-        <thead>
-          <tr><th>Прибор</th><th>Где стоит</th><th>Срок</th><th>Сутки входят в счёт</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>АМЕ-60</td><td>урочище Красное</td><td>1 июля 1992 по 31 декабря 2021</td><td>72 срока из 96</td></tr>
-          <tr><td>Сокол М1, Кр1</td><td>поляна</td><td>1 января 2022 по 31 декабря 2025</td><td>18 разных часов из 24</td></tr>
-          <tr><td>Сокол М1, Кр2</td><td>поле</td><td>1 января 2022 по 31 декабря 2025</td><td>18 разных часов из 24</td></tr>
-        </tbody>
-      </table>
-      <p class="note">Месяц входит в счёт, если неполных суток не больше 10 и нет пяти подряд. Среднее на экране архива подписано как среднее за выбранный период, рядом число лет.</p>
-    </section>
-
-    <section class="block" id="limits">
-      <h2>Ограничения ряда</h2>
-      <ul class="limits">
-        <li>АМЕ-60 и Сокол не соединять. Общего периода нет, линию через 31 декабря 2021 и 1 января 2022 не строить.</li>
-        <li>Это не норма ВМО. Для января валидных лет около 14 из 30, норму по этим файлам не набрать.</li>
-        <li>Свой прогноз по площадке не строить. Время в файлах не сдвигать.</li>
-        <li>Направления ветра у АМЕ-60 нет в 1998 году, в 2021 оно недостоверно. Розу за эти годы не строить.</li>
-        <li>Давление Кр1 за 2024: 1362 значения вне 940-1050 гПа. В месячном давлении апреля нет. Остаются 11 месяцев и 334 суток.</li>
-        <li>Полные годы АМЕ-60, все 12 месяцев: 1993, 2004, 2005, 2009, 2010, 2014, 2015, 2016. У Кр1 и Кр2 полные годы: 2024 и 2025.</li>
-      </ul>
-    </section>
-
-    <section class="block team" id="team">
+    <section class="team" id="team">
       <figure class="crew">
         <figcaption>лучший дрим-тим: Название_команды_не_забыть_изменить</figcaption>
         <div class="photo" id="crew-photo">
@@ -81,12 +63,9 @@
           <canvas class="out"></canvas>
         </div>
       </figure>
-      <div>
-        <h2>Смена</h2>
-        <p>Архив рядом считает сутки и месяцы отдельно по АМЕ-60, Кр1 и Кр2.</p>
-      </div>
     </section>
   </main>
-  <script type="module" src="/landing/landing.js"></script>
+  <script type="module" src="/landing/landing.js?v=9"></script>
+  <script src="/landing/map/map.js?v=10"></script>
 </body>
 </html>

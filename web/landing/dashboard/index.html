@@ -4,108 +4,172 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Архив, урочище Красное</title>
-  <link rel="stylesheet" href="/landing/dashboard/dashboard.css">
-  <script defer src="/landing/dashboard/dashboard.js"></script>
-  <script type="module" src="/landing/dashboard/trail.js"></script>
+  <link rel="stylesheet" href="/landing/dashboard/dashboard.css?v=2">
+  <script defer src="/landing/dashboard/dashboard.js?v=2"></script>
+  <script type="module" src="/landing/dashboard/trail.js?v=2"></script>
 </head>
 <body>
-<canvas id="ascii-field" aria-hidden="true"></canvas>
+<canvas id="ascii-field" class="cursor-trail" aria-hidden="true"></canvas>
 <div class="shell">
-  <aside class="side">
-    <div class="logo">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 4 2 6 0 9-3 1-6 3-6 7 4-1 7-1 9 1 1-4 4-6 7-7-2-1-3-3-3-6-3 1-5 0-7-4z"/></svg>
-      <span>Архив</span>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Урочище Красное</p>
+      <h1>Архив наблюдений</h1>
     </div>
-    <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg> Станция</p>
-    <div class="station-block" id="stations" role="radiogroup" aria-label="Станция"></div>
-    <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/></svg> Показатель</p>
-    <label class="field"><select id="metric"></select></label>
-    <p class="side-label">Вид графика</p>
-    <label class="field"><select id="view">
-      <option value="series">Временной ряд</option>
-      <option value="annual">Годовой ход</option>
-      <option value="dekad">Декады</option>
-      <option value="trend">Тренд одного месяца</option>
-      <option value="compare">Кр1 и Кр2</option>
-    </select></label>
-    <label class="field" id="trend-month-field" hidden>Месяц
-      <select id="trend-month">
-        <option value="1">Январь</option><option value="2">Февраль</option><option value="3">Март</option>
-        <option value="4">Апрель</option><option value="5">Май</option><option value="6">Июнь</option>
-        <option value="7">Июль</option><option value="8">Август</option><option value="9">Сентябрь</option>
-        <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
-      </select>
-    </label>
-    <div class="presets">
-      <button type="button" data-preset="ame">Архив АМЕ-60</button>
-      <button type="button" data-preset="pair">Поляна и поле, 2025</button>
-      <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
-    </div>
-    <p class="side-label">Шаблоны анализа</p>
-    <div class="presets" id="templates">
-      <button type="button" data-template="pair">Поляна и поле — температура</button>
-      <button type="button" data-template="soil">Воздух и почва по глубинам</button>
-      <button type="button" data-template="temprh">Температура и влажность</button>
-      <button type="button" data-template="pressure">Давление и качество</button>
-      <button type="button" data-template="wind">Ветровой режим</button>
-    </div>
-    <p class="side-label">Линия на графике</p>
-    <label class="field">Значение <input type="number" id="line-value" step="any" placeholder="0"></label>
-    <label class="field">Подпись <input type="text" id="line-label" placeholder="0 °C"></label>
-    <button type="button" class="excel" id="excel">Выгрузка в Excel (.xlsx)</button>
-    <button type="button" class="excel" id="exceptions">Журнал исключений</button>
-    <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg> Разбор</p>
-    <fieldset class="checks">
-      <label><input type="checkbox" id="opt-ma" checked><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-5 4 3 8-8"/></svg><span>Скользящее среднее</span><i class="dot" style="background:#7dcec6"></i></label>
-      <label><input type="checkbox" id="opt-band" checked><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8c3 2 5 2 8-1s5-3 10 0M3 16c3-2 5-2 8 1s5 3 10 0"/></svg><span>Полоса 10-90%</span><i class="dot" style="background:#7eaae0"></i></label>
-      <label><input type="checkbox" id="opt-anomaly" checked><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14l3-6 3 4 3-8 3 10 4-4"/></svg><span>Отклонения и кластеры</span><i class="dot" style="background:#e3c36a"></i></label>
-      <label><input type="checkbox" id="opt-rose"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg><span>Роза ветров</span><i class="dot" style="background:#c9a0e0"></i></label>
-      <label><input type="checkbox" id="opt-soil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 13h16M4 18h16"/></svg><span>Профиль почвы</span><i class="dot" style="background:#8fd18a"></i></label>
-    </fieldset>
-    <p class="side-note" id="side-note"></p>
-    <a class="back" href="/landing">Полевой журнал</a>
-  </aside>
-  <div class="maincol">
-    <section class="stats" id="stats" aria-label="Сводка периода"></section>
-    <div class="charts" id="charts">
-      <section class="panel" aria-labelledby="main-title">
-        <div class="panel-head">
-          <h2 id="main-title">Температура воздуха</h2>
-          <p class="legend" id="main-legend"></p>
+    <a class="back" href="/landing">главное</a>
+  </header>
+  <div class="work">
+    <div class="maincol">
+      <section class="filters" aria-label="Период и показатель">
+        <div class="station-field">
+          <p class="field-label" id="station-label">Станция</p>
+          <div class="station-block" id="stations" role="radiogroup" aria-labelledby="station-label"></div>
         </div>
-        <div class="plot"><canvas id="chart"></canvas><div class="tip" id="chart-tip" hidden></div></div>
-      </section>
-      <div class="extra">
-        <section class="panel" id="anomaly-panel" aria-labelledby="anomaly-title">
-          <div class="panel-head">
-            <h2 id="anomaly-title">Аномалии и кластеры</h2>
-            <p class="legend" id="anomaly-legend"></p>
+        <label class="field">Показатель
+          <select id="metric"></select>
+        </label>
+        <label class="field">Вид графика
+          <select id="view">
+            <option value="series">Временной ряд</option>
+            <option value="annual">Годовой ход</option>
+            <option value="dekad">Декады</option>
+            <option value="trend">Тренд одного месяца</option>
+            <option value="compare">Кр1 и Кр2</option>
+          </select>
+        </label>
+        <label class="field" id="trend-month-field" hidden>Месяц
+          <select id="trend-month">
+            <option value="1">Январь</option><option value="2">Февраль</option><option value="3">Март</option>
+            <option value="4">Апрель</option><option value="5">Май</option><option value="6">Июнь</option>
+            <option value="7">Июль</option><option value="8">Август</option><option value="9">Сентябрь</option>
+            <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
+          </select>
+        </label>
+        <div class="field step-field">
+          <span class="field-label">Шаг</span>
+          <div class="segments" role="group" aria-label="Шаг графика">
+            <button type="button" data-step="day">Дни</button>
+            <button type="button" data-step="month" aria-pressed="true">Месяцы</button>
           </div>
-          <p class="caption" id="anomaly-caption"></p>
-          <div class="plot"><canvas id="anomaly"></canvas><div class="tip" id="anomaly-tip" hidden></div></div>
+        </div>
+        <label class="field">Дата начала
+          <input id="date-start" type="date">
+          <span class="field-error" id="date-start-error" role="alert"></span>
+        </label>
+        <label class="field">Дата конца
+          <input id="date-end" type="date">
+          <span class="field-error" id="date-end-error" role="alert"></span>
+        </label>
+        <div class="field apply-field">
+          <span class="field-label">Период</span>
+          <button type="button" class="apply" id="apply-range">Применить</button>
+        </div>
+        <p class="range-note" id="range-note"></p>
+      </section>
+      <section class="stats" id="stats" aria-label="Сводка периода"></section>
+      <div class="charts" id="charts">
+        <section class="panel" aria-labelledby="main-title">
+          <div class="panel-head">
+            <h2 id="main-title">Температура воздуха</h2>
+            <p class="legend" id="main-legend"></p>
+          </div>
+          <div class="plot">
+            <canvas id="chart"></canvas>
+            <p class="plot-empty" id="chart-empty" hidden></p>
+            <div class="tip" id="chart-tip" hidden></div>
+          </div>
         </section>
-        <section class="panel" id="rose-panel" hidden>
-          <div class="panel-head"><h2>Роза ветров</h2><p class="legend" id="rose-note"></p></div>
-          <div class="plot"><canvas id="rose"></canvas></div>
-        </section>
-        <section class="panel" id="soil-panel" hidden>
-          <div class="panel-head"><h2>Почва</h2><p class="legend" id="soil-legend"></p></div>
-          <div class="plot"><canvas id="soil"></canvas></div>
-        </section>
+        <div class="extra">
+          <section class="panel" id="anomaly-panel" aria-labelledby="anomaly-title">
+            <div class="panel-head">
+              <h2 id="anomaly-title">Отклонения</h2>
+              <p class="legend" id="anomaly-legend"></p>
+            </div>
+            <p class="caption" id="anomaly-caption"></p>
+            <div class="plot plot-short">
+              <canvas id="anomaly"></canvas>
+              <p class="plot-empty" id="anomaly-empty" hidden></p>
+              <div class="tip" id="anomaly-tip" hidden></div>
+            </div>
+          </section>
+          <section class="panel" id="rose-panel" hidden>
+            <div class="panel-head"><h2>Роза ветров</h2><p class="legend" id="rose-note"></p></div>
+            <div class="rose-layout">
+              <div class="rose-frame">
+                <svg id="rose" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rose-note"></svg>
+              </div>
+              <ul class="rose-legend" id="rose-legend"></ul>
+            </div>
+            <p class="plot-empty rose-empty" id="rose-empty" hidden></p>
+            <details class="rose-numbers">
+              <summary>Числа по секторам</summary>
+              <div class="table-scroll rose-table-scroll">
+                <table id="rose-table"></table>
+              </div>
+            </details>
+          </section>
+          <section class="panel" id="soil-panel" hidden>
+            <div class="panel-head"><h2>Почва</h2><p class="legend" id="soil-legend"></p></div>
+            <div class="plot plot-short"><canvas id="soil"></canvas></div>
+          </section>
+        </div>
       </div>
+      <section class="timeline panel" aria-label="Временная шкала">
+        <div class="panel-head">
+          <h2>Временная шкала</h2>
+          <p class="legend" id="window-label"></p>
+        </div>
+        <div class="brush" id="brush">
+          <canvas id="overview" aria-hidden="true"></canvas>
+          <div id="selection" class="selection"></div>
+          <input type="range" id="range-start" aria-label="Начало выбранного периода">
+          <input type="range" id="range-end" aria-label="Конец выбранного периода">
+        </div>
+        <div class="scale-ends"><span id="archive-start"></span><span id="archive-end"></span></div>
+      </section>
+      <details class="panel table-card" id="table-panel">
+        <summary>Таблица периода</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Период</th><th>Значение</th><th>Покрытие</th><th>Статус</th></tr></thead>
+            <tbody id="records"></tbody>
+          </table>
+        </div>
+      </details>
     </div>
-    <section class="timeline" aria-label="Временная шкала">
-      <div class="panel-head">
-        <h2>Временная шкала</h2>
-        <p class="legend" id="window-label"></p>
-      </div>
-      <div class="brush" id="brush">
-        <canvas id="overview" aria-hidden="true"></canvas>
-        <div id="selection" class="selection"></div>
-        <input type="range" id="range-start" aria-label="Начало выбранного периода">
-        <input type="range" id="range-end" aria-label="Конец выбранного периода">
-      </div>
-    </section>
+    <aside class="tools">
+      <details class="tool-box" open>
+        <summary>Инструменты</summary>
+        <p class="side-label">Готовые периоды</p>
+        <div class="presets">
+          <button type="button" data-preset="ame">Архив АМЕ-60</button>
+          <button type="button" data-preset="pair">Поляна и поле, 2025</button>
+          <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
+        </div>
+        <p class="side-label">Шаблоны анализа</p>
+        <div class="presets" id="templates">
+          <button type="button" data-template="pair">Поляна и поле, температура</button>
+          <button type="button" data-template="soil">Воздух и почва по глубинам</button>
+          <button type="button" data-template="temprh">Температура и влажность</button>
+          <button type="button" data-template="pressure">Давление и качество</button>
+          <button type="button" data-template="wind">Ветровой режим</button>
+        </div>
+        <p class="side-label">Линия на графике</p>
+        <label class="field">Значение <input type="number" id="line-value" step="any" placeholder="0"></label>
+        <label class="field">Подпись <input type="text" id="line-label" placeholder="0 °C"></label>
+        <button type="button" class="excel" id="excel">Выгрузка в Excel (.xlsx)</button>
+        <button type="button" class="excel" id="exceptions">Журнал исключений</button>
+        <p class="side-label">Разбор</p>
+        <fieldset class="checks">
+          <label><input type="checkbox" id="opt-ma" checked><span>Скользящее среднее</span><i class="swatch" style="background:#E4C98A"></i></label>
+          <label><input type="checkbox" id="opt-band" checked><span>Полоса 10-90%</span><i class="swatch" style="background:#BCED91"></i></label>
+          <label><input type="checkbox" id="opt-anomaly" checked><span>Отклонения</span><i class="swatch" style="background:#E0A090"></i></label>
+          <label><input type="checkbox" id="opt-rose"><span>Роза ветров</span><i class="swatch" style="background:#8FB4A4"></i></label>
+          <label><input type="checkbox" id="opt-soil"><span>Профиль почвы</span><i class="swatch" style="background:#7EAA98"></i></label>
+        </fieldset>
+        <p class="side-note" id="side-note"></p>
+      </details>
+    </aside>
   </div>
 </div>
 <div class="journal" id="exceptions-panel" hidden>

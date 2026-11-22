@@ -1,237 +1,792 @@
-const sites = [
-  { id: "ame60", name: "АМЕ-60", place: "урочище, отдельная площадка", lon: 32.88, lat: 56.5 },
-  { id: "kr1", name: "Сокол М1, Кр1", place: "поляна", lon: 32.9, lat: 56.48 },
-  { id: "kr2", name: "Сокол М1, Кр2", place: "поле", lon: 32.905, lat: 56.475 }
-];
+/* Карта архивного ветра.
+   Ссылка на архив: /landing/dashboard?station=kr1&date=YYYY-MM-DD&metric=wind_speed
+   Дата в ссылке - выбранный на карте день, даже если ветра в нём нет.
+   Числа берутся из wind.json (meteo.engine.daily_statistics). */
+
+const COMPASS = ["север", "северо-восток", "восток", "юго-восток", "юг", "юго-запад", "запад", "северо-запад"];
+const PER_STATION = 18;
+const PIN = `<svg viewBox="0 0 36 44" aria-hidden="true"><path class="pin-body" d="M18 42 C18 42 5 25 5 16 A13 13 0 1 1 31 16 C31 25 18 42 18 42 Z"/><circle class="pin-well" cx="18" cy="15" r="4.2"/><path class="pin-vane" d="M18 15 V9 M14.4 11.4 H21.6"/></svg>`;
 
 const canvas = document.getElementById("map");
-const card = document.getElementById("card");
+const stage = document.getElementById("map-stage");
+const tip = document.getElementById("map-tip");
+const dateInput = document.getElementById("map-date");
+const prevButton = document.getElementById("map-prev");
+const nextButton = document.getElementById("map-next");
+const motionButton = document.getElementById("map-motion");
+const frameButton = document.getElementById("map-frame");
+const nearestButton = document.getElementById("map-nearest");
+const markerRoot = document.getElementById("map-markers");
+const phoneRoot = document.getElementById("map-phone");
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let motion = !reduced;
 let ring = [];
-let wind = {};
-let view = { minX: 0, minY: 0, maxX: 1, maxY: 1, pad: 36 };
+let stations = [];
+let wind = null;
+let selected = "";
+let datesWithData = [];
+let flowDates = [];
+let scaleMax = 1;
+let view = { minX: 0, minY: 0, maxX: 1, maxY: 1, pad: 28 };
+let cam = { lon: 32.9, lat: 56.49, zoom: 1 };
 let camera = { x: 0, y: 0, scale: 1 };
+let specks = {};
+let markers = {};
+let markersDirty = true;
+let openId = "";
+let raf = 0;
+let lastTick = 0;
 let drag = null;
 
+function width() { return canvas.clientWidth; }
+function height() { return canvas.clientHeight; }
+
 function fitScale() {
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
   const spanX = view.maxX - view.minX || 1;
   const spanY = view.maxY - view.minY || 1;
-  return Math.min((width - view.pad * 2) / spanX, (height - view.pad * 2) / spanY);
+  return Math.min((width() - view.pad * 2) / spanX, (height() - view.pad * 2) / spanY);
 }
 
 function basePoint(lon, lat) {
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
   const fit = fitScale();
   return {
     x: view.pad + (lon - view.minX) * fit,
-    y: height - view.pad - (lat - view.minY) * fit
+    y: height() - view.pad - (lat - view.minY) * fit,
   };
 }
 
 function project(lon, lat) {
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
   const point = basePoint(lon, lat);
   return {
-    x: (point.x - width / 2) * camera.scale + width / 2 + camera.x,
-    y: (point.y - height / 2) * camera.scale + height / 2 + camera.y
+    x: (point.x - width() / 2) * camera.scale + width() / 2 + camera.x,
+    y: (point.y - height() / 2) * camera.scale + height() / 2 + camera.y,
   };
 }
 
-function clampCamera() {
-  if (!ring.length) return;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  const points = ring.map(point => basePoint(point[0], point[1]));
-  const minX = Math.min(...points.map(point => point.x));
-  const maxX = Math.max(...points.map(point => point.x));
-  const minY = Math.min(...points.map(point => point.y));
-  const maxY = Math.max(...points.map(point => point.y));
-  const slackX = Math.max(0, ((maxX - minX) * camera.scale - width) / 2);
-  const slackY = Math.max(0, ((maxY - minY) * camera.scale - height) / 2);
-  camera.x = Math.max(-slackX, Math.min(slackX, camera.x));
-  camera.y = Math.max(-slackY, Math.min(slackY, camera.y));
+function unproject(sx, sy) {
+  const fit = fitScale();
+  const bx = (sx - width() / 2 - camera.x) / camera.scale + width() / 2;
+  const by = (sy - height() / 2 - camera.y) / camera.scale + height() / 2;
+  return [
+    view.minX + (bx - view.pad) / fit,
+    view.minY + (height() - view.pad - by) / fit,
+  ];
 }
 
-function footprint(site) {
-  const steps = 18;
-  const points = [];
-  for (let i = 0; i < steps; i += 1) {
-    const angle = (i / steps) * Math.PI * 2;
-    points.push(project(site.lon + Math.cos(angle) * 0.012, site.lat + Math.sin(angle) * 0.008));
+function inside(lon, lat) {
+  let cross = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const hit = (yi > lat) !== (yj > lat)
+      && lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-15) + xi;
+    if (hit) cross = !cross;
   }
-  return points;
+  return cross;
 }
 
-function drawArrow(ctx, x, y, degrees) {
-  const bearing = ((degrees + 180) % 360) * Math.PI / 180;
-  const length = 54;
-  const tipX = x + Math.sin(bearing) * length;
-  const tipY = y - Math.cos(bearing) * length;
-  ctx.strokeStyle = "#f4e7a8";
-  ctx.fillStyle = "#f4e7a8";
-  ctx.lineWidth = 3;
+function applyCamera() {
+  if (cam.zoom <= 1.001) {
+    camera.scale = 1;
+    camera.x = 0;
+    camera.y = 0;
+    return;
+  }
+  camera.scale = cam.zoom;
+  const point = basePoint(cam.lon, cam.lat);
+  camera.x = -(point.x - width() / 2) * camera.scale;
+  camera.y = -(point.y - height() / 2) * camera.scale;
+}
+
+function frameStations() {
+  if (!stations.length || width() < 20) return;
+  const lons = stations.map((site) => site.lon);
+  const lats = stations.map((site) => site.lat);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  let lon = (minLon + maxLon) / 2;
+  let lat = (minLat + maxLat) / 2;
+  if (!inside(lon, lat)) {
+    lon = stations.find((site) => site.id === "kr1")?.lon ?? lon;
+    lat = stations.find((site) => site.id === "kr1")?.lat ?? lat;
+  }
+  const spanLon = Math.max(0.035, (maxLon - minLon) * 2.4);
+  const spanLat = Math.max(0.028, (maxLat - minLat) * 2.8);
+  const fit = fitScale();
+  const zoom = Math.min((width() - 160) / (spanLon * fit), (height() - 160) / (spanLat * fit));
+  cam.lon = lon;
+  cam.lat = lat;
+  cam.zoom = Math.max(1, Math.min(14, zoom));
+  markersDirty = true;
+}
+
+function shiftView(dx, dy) {
+  if (!dx && !dy) return;
+  applyCamera();
+  const [lon1, lat1] = unproject(width() / 2, height() / 2);
+  const [lon2, lat2] = unproject(width() / 2 - dx, height() / 2 - dy);
+  cam.lon += lon2 - lon1;
+  cam.lat += lat2 - lat1;
+}
+
+function ringScreenBounds() {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  ring.forEach((point) => {
+    const spot = project(point[0], point[1]);
+    minX = Math.min(minX, spot.x);
+    maxX = Math.max(maxX, spot.x);
+    minY = Math.min(minY, spot.y);
+    maxY = Math.max(maxY, spot.y);
+  });
+  return { minX, maxX, minY, maxY };
+}
+
+function keepViewInside() {
+  if (!ring.length || width() < 40 || height() < 40) return;
+  applyCamera();
+  if (cam.zoom <= 1.001) return;
+  const box = ringScreenBounds();
+  const spanX = box.maxX - box.minX;
+  const spanY = box.maxY - box.minY;
+  let dx = 0;
+  let dy = 0;
+  if (spanX <= width()) dx = (width() - spanX) / 2 - box.minX;
+  else if (box.minX > 0) dx = -box.minX;
+  else if (box.maxX < width()) dx = width() - box.maxX;
+  if (spanY <= height()) dy = (height() - spanY) / 2 - box.minY;
+  else if (box.minY > 0) dy = -box.minY;
+  else if (box.maxY < height()) dy = height() - box.maxY;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+  shiftView(dx, dy);
+}
+
+function panBy(dx, dy) {
+  if (cam.zoom <= 1.001 || (!dx && !dy)) return;
+  shiftView(dx, dy);
+  keepViewInside();
+  markersDirty = true;
+}
+
+function zoomBy(factor, sx, sy) {
+  const next = Math.max(1, Math.min(14, cam.zoom * factor));
+  if (Math.abs(next - cam.zoom) < 0.0001) return;
+  if (next <= 1.001) {
+    cam.zoom = 1;
+    markersDirty = true;
+    return;
+  }
+  applyCamera();
+  const px = sx == null ? width() / 2 : sx;
+  const py = sy == null ? height() / 2 : sy;
+  const [lon, lat] = unproject(px, py);
+  cam.zoom = next;
+  applyCamera();
+  const spot = project(lon, lat);
+  shiftView(px - spot.x, py - spot.y);
+  keepViewInside();
+  markersDirty = true;
+}
+
+function lowerBound(list, iso) {
+  let lo = 0;
+  let hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid] < iso) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+function stepDate(iso, dir) {
+  const index = lowerBound(datesWithData, iso);
+  if (dir < 0) {
+    const prev = index - 1;
+    return prev >= 0 ? datesWithData[prev] : null;
+  }
+  const next = datesWithData[index] === iso ? index + 1 : index;
+  return next < datesWithData.length ? datesWithData[next] : null;
+}
+
+function closestFlow(iso) {
+  if (!flowDates.length) return null;
+  const index = lowerBound(flowDates, iso);
+  const choices = [];
+  if (index < flowDates.length) choices.push(flowDates[index]);
+  if (index > 0) choices.push(flowDates[index - 1]);
+  let best = null;
+  let bestDist = Infinity;
+  const origin = dayNumber(iso);
+  choices.forEach((item) => {
+    const dist = Math.abs(dayNumber(item) - origin);
+    if (dist < bestDist || (dist === bestDist && best && item > best)) {
+      best = item;
+      bestDist = dist;
+    }
+  });
+  return best;
+}
+
+function dayNumber(iso) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return Date.UTC(year, month - 1, day) / 86400000;
+}
+
+function outside(site, iso) {
+  return iso < site.period[0] || iso > site.period[1];
+}
+
+function recordFor(site, iso) {
+  if (outside(site, iso)) return null;
+  return site.days[iso] || null;
+}
+
+function stationHref(id, iso) {
+  return `/landing/dashboard?station=${id}&date=${iso}&metric=wind_speed`;
+}
+
+function formatSpeed(value) {
+  return Number(value).toFixed(2).replace(".", ",");
+}
+
+function compass(deg) {
+  const turn = ((deg % 360) + 360) % 360;
+  return COMPASS[Math.round(turn / 45) % 8];
+}
+
+function flowVector(rec) {
+  if (!rec || rec.flow !== "vector" || rec.dir == null) return null;
+  const bearing = ((rec.dir + 180) % 360) * Math.PI / 180;
+  return { x: Math.sin(bearing), y: -Math.cos(bearing) };
+}
+
+function zoneRadius() {
+  return Math.max(48, Math.min(150, 36 + cam.zoom * 14));
+}
+
+function speedColor(speed) {
+  const t = Math.max(0, Math.min(1, speed / scaleMax));
+  const from = [214, 236, 176];
+  const to = [255, 252, 220];
+  const rgb = from.map((channel, index) => Math.round(channel + (to[index] - channel) * t));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
+function cardLines(site) {
+  const lines = [site.name, selected];
+  if (outside(site, selected)) {
+    lines.push("Вне срока станции");
+    lines.push(`Срок с ${site.period[0]} по ${site.period[1]}`);
+    return lines;
+  }
+  const rec = recordFor(site, selected);
+  if (!rec) {
+    lines.push("Нет наблюдений за эти сутки");
+    return lines;
+  }
+  if (rec.flow === "calm") {
+    lines.push("0 м/с, штиль");
+  } else if (rec.speed == null) {
+    lines.push(rec.reason || "Скорости нет");
+  } else if (rec.flow === "vector" && rec.dir != null) {
+    lines.push(`${formatSpeed(rec.speed)} м/с, от ${Math.round(rec.dir)}°, ${compass(rec.dir)}`);
+  } else {
+    lines.push(`${formatSpeed(rec.speed)} м/с`);
+    if (rec.reason) lines.push(rec.reason);
+  }
+  lines.push("Метка схематичная: координат в архиве нет");
+  return lines;
+}
+
+function showTip(site) {
+  const anchor = markers[site.id] && markers[site.id].hit;
+  if (!anchor) return;
+  openId = site.id;
+  tip.replaceChildren();
+  cardLines(site).forEach((line) => {
+    const row = document.createElement("p");
+    row.textContent = line;
+    tip.append(row);
+  });
+  const link = document.createElement("a");
+  link.className = "goto";
+  link.href = stationHref(site.id, selected);
+  link.textContent = "Перейти";
+  tip.append(link);
+  tip.hidden = false;
+  const stageBox = stage.getBoundingClientRect();
+  const box = anchor.getBoundingClientRect();
+  let left = box.right - stageBox.left + 8;
+  let top = box.top - stageBox.top;
+  if (left + 240 > stageBox.width) left = Math.max(8, box.left - stageBox.left - 248);
+  if (top + 150 > stageBox.height) top = Math.max(8, stageBox.height - 158);
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+  Object.keys(markers).forEach((id) => {
+    markers[id].hit.classList.toggle("is-open", id === site.id);
+  });
+}
+
+function hideTip() {
+  openId = "";
+  tip.hidden = true;
+  Object.keys(markers).forEach((id) => markers[id].hit.classList.remove("is-open"));
+}
+
+function statusClass(site) {
+  if (outside(site, selected)) return "is-dim";
+  const rec = recordFor(site, selected);
+  if (!rec || rec.flow === "none") return "is-dim";
+  if (rec.flow === "calm") return "is-calm";
+  return "is-on";
+}
+
+function labelSpeed(site) {
+  if (outside(site, selected)) return "";
+  const rec = recordFor(site, selected);
+  if (!rec) return "";
+  if (rec.flow === "calm") return "Штиль";
+  if (rec.speed == null) return "";
+  return `${formatSpeed(rec.speed)} м/с`;
+}
+
+function ariaText(site) {
+  return cardLines(site).join(". ");
+}
+
+function syncMotionButton() {
+  motionButton.textContent = motion ? "Пауза" : "Движение";
+  motionButton.setAttribute("aria-pressed", motion ? "true" : "false");
+}
+
+function updateChrome() {
+  dateInput.value = selected;
+  const prev = stepDate(selected, -1);
+  const next = stepDate(selected, 1);
+  prevButton.disabled = !prev;
+  nextButton.disabled = !next;
+  stations.forEach((site) => {
+    const href = stationHref(site.id, selected);
+    const node = markers[site.id];
+    if (node) {
+      node.hit.setAttribute("aria-label", ariaText(site));
+      const mode = statusClass(site);
+      node.hit.className = `mark ${mode}${openId === site.id ? " is-open" : ""}`;
+    }
+    const phone = phoneRoot.querySelector(`[data-station="${site.id}"]`);
+    if (phone) {
+      phone.href = href;
+      const extra = labelSpeed(site);
+      phone.textContent = extra ? `${site.name}: ${extra}` : site.name;
+    }
+  });
+  const near = closestFlow(selected);
+  const hasFlow = flowDates.includes(selected);
+  if (!near || hasFlow) {
+    nearestButton.hidden = true;
+  } else {
+    nearestButton.hidden = false;
+    nearestButton.textContent = `Ближайший день с потоком: ${near}`;
+    nearestButton.dataset.date = near;
+  }
+  markersDirty = true;
+}
+
+function setDate(iso) {
+  if (!iso || iso < wind.archive_start || iso > wind.archive_end) return;
+  selected = iso;
+  updateChrome();
+  resetSpecks();
+  paintAll();
+}
+
+function resetSpecks() {
+  const count = PER_STATION;
+  stations.forEach((site) => {
+    const rec = recordFor(site, selected);
+    if (!motion || document.hidden || !rec || rec.flow !== "vector") {
+      specks[site.id] = [];
+      return;
+    }
+    const radius = zoneRadius() * 0.82;
+    specks[site.id] = Array.from({ length: count }, () => ({
+      along: (Math.random() * 2 - 1) * radius,
+      across: (Math.random() * 2 - 1) * radius * 0.75,
+    }));
+  });
+}
+
+function updateSpecks(dt) {
+  const radius = zoneRadius();
+  stations.forEach((site) => {
+    const rec = recordFor(site, selected);
+    const list = specks[site.id];
+    if (!rec || rec.flow !== "vector" || !list || !list.length) return;
+    const t = Math.max(0, Math.min(1, rec.speed / scaleMax));
+    const step = (8 + 34 * t) * dt;
+    list.forEach((speck) => {
+      speck.along += step;
+      const limit = radius * radius - speck.across * speck.across;
+      if (speck.along * speck.along > limit) {
+        speck.along = -Math.sqrt(Math.max(0, limit));
+      }
+    });
+  });
+}
+
+function drawArrow(ctx, x, y, ux, uy, len) {
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(tipX, tipY);
+  ctx.moveTo(x - ux * len, y - uy * len);
+  ctx.lineTo(x + ux * len * 0.45, y + uy * len * 0.45);
   ctx.stroke();
-  const head = 0.55;
+  const hx = x + ux * len * 0.45;
+  const hy = y + uy * len * 0.45;
   ctx.beginPath();
-  ctx.moveTo(tipX, tipY);
-  ctx.lineTo(tipX - Math.sin(bearing - 0.45) * length * head, tipY + Math.cos(bearing - 0.45) * length * head);
-  ctx.lineTo(tipX - Math.sin(bearing + 0.45) * length * head, tipY + Math.cos(bearing + 0.45) * length * head);
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(hx, hy);
+  ctx.lineTo(hx - ux * 5 - uy * 3.2, hy - uy * 5 + ux * 3.2);
+  ctx.moveTo(hx, hy);
+  ctx.lineTo(hx - ux * 5 + uy * 3.2, hy - uy * 5 - ux * 3.2);
+  ctx.stroke();
 }
 
-function draw() {
-  const ratio = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  canvas.width = Math.max(1, Math.round(width * ratio));
-  canvas.height = Math.max(1, Math.round(height * ratio));
+function drawFlows(ctx) {
+  const radius = zoneRadius();
+  stations.forEach((site) => {
+    const rec = recordFor(site, selected);
+    const vector = flowVector(rec);
+    if (!vector) return;
+    const origin = project(site.lon, site.lat);
+    const t = Math.max(0, Math.min(1, rec.speed / scaleMax));
+    const len = 16 + 28 * t;
+    ctx.strokeStyle = speedColor(rec.speed);
+    ctx.lineWidth = 1.8;
+    ctx.globalAlpha = 0.82;
+    if (!motion) {
+      for (let i = 0; i < 7; i += 1) {
+        const shift = (i - 3) * 11;
+        drawArrow(ctx, origin.x - vector.y * shift, origin.y + vector.x * shift, vector.x, vector.y, len);
+      }
+    } else {
+      (specks[site.id] || []).forEach((speck) => {
+        const x = origin.x + vector.x * speck.along - vector.y * speck.across;
+        const y = origin.y + vector.y * speck.along + vector.x * speck.across;
+        if ((x - origin.x) ** 2 + (y - origin.y) ** 2 > radius * radius) return;
+        ctx.beginPath();
+        ctx.moveTo(x - vector.x * len * 0.85, y - vector.y * len * 0.85);
+        ctx.lineTo(x + vector.x * 6, y + vector.y * 6);
+        ctx.stroke();
+      });
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+function traceRing(ctx) {
+  ctx.beginPath();
+  ring.forEach((point, index) => {
+    const spot = project(point[0], point[1]);
+    if (index) ctx.lineTo(spot.x, spot.y);
+    else ctx.moveTo(spot.x, spot.y);
+  });
+  ctx.closePath();
+}
+
+const TILES = ["#12362c", "#1f5a40", "#3e7a52", "#163e38", "#2a6848", "#0e2c24", "#4c8a5e", "#245848"];
+let landCanvas = null;
+let landKey = "";
+
+function tileColor(ix, iy) {
+  const n = Math.abs((ix * 17 + iy * 31) * 13 + ix * iy);
+  return TILES[n % TILES.length];
+}
+
+function drawTerrain(ctx) {
+  const key = `${Math.round(width())}x${Math.round(height())}|${cam.zoom.toFixed(3)}|${cam.lon.toFixed(4)}|${cam.lat.toFixed(4)}`;
+  if (!landCanvas || landKey !== key) {
+    landKey = key;
+    if (!landCanvas) landCanvas = document.createElement("canvas");
+    landCanvas.width = Math.max(2, Math.round(width()));
+    landCanvas.height = Math.max(2, Math.round(height()));
+    const paper = landCanvas.getContext("2d");
+    const step = 0.011;
+    const ix0 = Math.floor(view.minX / step);
+    const ix1 = Math.ceil(view.maxX / step);
+    const iy0 = Math.floor(view.minY / step);
+    const iy1 = Math.ceil(view.maxY / step);
+    for (let ix = ix0; ix <= ix1; ix += 1) {
+      for (let iy = iy0; iy <= iy1; iy += 1) {
+        const lon = ix * step;
+        const lat = iy * step;
+        const corners = [[lon, lat], [lon + step, lat], [lon + step, lat + step], [lon, lat + step]];
+        const midLon = lon + step * 0.5;
+        const midLat = lat + step * 0.5;
+        const touched = inside(midLon, midLat) || corners.some((point) => inside(point[0], point[1]));
+        if (!touched) continue;
+        paper.beginPath();
+        corners.forEach((point, index) => {
+          const spot = project(point[0], point[1]);
+          if (index) paper.lineTo(spot.x, spot.y);
+          else paper.moveTo(spot.x, spot.y);
+        });
+        paper.closePath();
+        paper.fillStyle = tileColor(ix, iy);
+        paper.fill();
+        paper.strokeStyle = "rgba(216, 232, 196, 0.42)";
+        paper.lineWidth = 1;
+        paper.stroke();
+      }
+    }
+  }
+  ctx.drawImage(landCanvas, 0, 0, width(), height());
+}
+
+function paintCanvas() {
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const w = width();
+  const h = height();
+  if (w < 2 || h < 2) return;
+  applyCamera();
+  const bw = Math.round(w * ratio);
+  const bh = Math.round(h * ratio);
+  if (canvas.width !== bw || canvas.height !== bh) {
+    canvas.width = bw;
+    canvas.height = bh;
+  }
   const ctx = canvas.getContext("2d");
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  ctx.fillStyle = "#10261c";
-  ctx.fillRect(0, 0, width, height);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#07080c";
+  ctx.fillRect(0, 0, w, h);
   if (!ring.length) return;
-  const shape = ring.map(point => project(point[0], point[1]));
-  ctx.beginPath();
-  shape.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-  ctx.closePath();
+  traceRing(ctx);
   ctx.save();
   ctx.clip();
-  const wash = ctx.createLinearGradient(0, 0, width, height);
-  wash.addColorStop(0, "#1d5a3b");
-  wash.addColorStop(0.45, "#2f7a4c");
-  wash.addColorStop(1, "#1a4a36");
-  ctx.fillStyle = wash;
-  ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "rgba(214, 196, 132, 0.16)";
-  sites.forEach(site => {
-    const spot = project(site.lon, site.lat);
-    ctx.beginPath();
-    ctx.ellipse(spot.x, spot.y, 70, 42, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.strokeStyle = "rgba(232, 244, 214, 0.18)";
-  ctx.lineWidth = 1;
-  for (let step = 1; step < 5; step += 1) {
-    const lon = view.minX + (view.maxX - view.minX) * step / 5;
-    const top = project(lon, view.maxY);
-    const bottom = project(lon, view.minY);
-    ctx.beginPath();
-    ctx.moveTo(top.x, top.y);
-    ctx.lineTo(bottom.x, bottom.y);
-    ctx.stroke();
-  }
+  drawTerrain(ctx);
+  drawFlows(ctx);
   ctx.restore();
-  ctx.strokeStyle = "#d5efc8";
-  ctx.lineWidth = 2;
+  traceRing(ctx);
+  ctx.strokeStyle = "#d7e7c8";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
-  ctx.fillStyle = "#d5efc8";
-  ctx.font = "12px \"Roboto Mono\", monospace";
-  const north = project(view.minX, view.maxY);
-  ctx.fillText("север", north.x + 8, north.y + 16);
-  sites.forEach(site => {
-    const area = footprint(site);
-    ctx.beginPath();
-    area.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-    ctx.closePath();
-    ctx.fillStyle = "rgba(188, 237, 145, 0.28)";
-    ctx.strokeStyle = "#d7f5c4";
-    ctx.stroke();
-    ctx.fill();
+}
+
+function placeMarkers() {
+  stations.forEach((site) => {
+    const node = markers[site.id];
+    if (!node) return;
     const spot = project(site.lon, site.lat);
-    const sample = wind[site.id];
-    ctx.fillStyle = "#f7f3df";
-    ctx.beginPath();
-    ctx.arc(spot.x, spot.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-    if (sample && sample.speed > 0) drawArrow(ctx, spot.x, spot.y, sample.dir);
-    const windText = !sample ? "ветра нет" : sample.speed === 0 ? "штиль" : `${sample.speed.toFixed(1)} м/с, от ${Math.round(sample.dir)}°`;
-    ctx.fillStyle = "#f4f6f1";
-    ctx.font = "13px Inter, sans-serif";
-    ctx.fillText(site.name, spot.x + 16, spot.y - 16);
-    ctx.font = "12px \"Roboto Mono\", monospace";
-    ctx.fillText(windText, spot.x + 16, spot.y + 2);
+    node.hit.style.left = `${spot.x}px`;
+    node.hit.style.top = `${spot.y}px`;
   });
-  placeCard();
+  markersDirty = false;
+  if (openId) {
+    const site = stations.find((item) => item.id === openId);
+    if (site) showTip(site);
+  }
 }
 
-function hit(event) {
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  return sites.find(site => {
-    const spot = project(site.lon, site.lat);
-    return Math.hypot(spot.x - x, spot.y - y) < 28;
+function paintAll() {
+  keepViewInside();
+  paintCanvas();
+  placeMarkers();
+}
+
+function stopLoop() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+}
+
+function frame(now) {
+  if (!motion || document.hidden) {
+    raf = 0;
+    return;
+  }
+  const dt = Math.min(0.05, (now - lastTick) / 1000 || 0.016);
+  lastTick = now;
+  updateSpecks(dt);
+  paintCanvas();
+  raf = requestAnimationFrame(frame);
+}
+
+function startLoop() {
+  if (raf || !motion || document.hidden) return;
+  lastTick = performance.now();
+  raf = requestAnimationFrame(frame);
+}
+
+function bindMarker(site) {
+  const hit = document.createElement("button");
+  hit.type = "button";
+  hit.className = "mark";
+  hit.innerHTML = PIN;
+  markerRoot.append(hit);
+  markers[site.id] = { hit };
+  hit.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (openId === site.id) hideTip();
+    else showTip(site);
   });
+  const item = document.createElement("li");
+  const phone = document.createElement("a");
+  phone.dataset.station = site.id;
+  item.append(phone);
+  phoneRoot.append(item);
 }
 
-let chosen = null;
-
-function placeCard() {
-  if (!chosen || card.hidden) return;
-  const spot = project(chosen.lon, chosen.lat);
-  const width = Math.min(280, canvas.clientWidth - 24);
-  const left = Math.max(8, Math.min(canvas.clientWidth - width - 8, spot.x + 18));
-  const top = Math.max(8, Math.min(canvas.clientHeight - 180, spot.y - 12));
-  card.style.width = `${width}px`;
-  card.style.left = `${left}px`;
-  card.style.top = `${top}px`;
+function bindControls() {
+  prevButton.addEventListener("click", () => setDate(stepDate(selected, -1)));
+  nextButton.addEventListener("click", () => setDate(stepDate(selected, 1)));
+  frameButton.addEventListener("click", () => {
+    frameStations();
+    paintAll();
+  });
+  motionButton.addEventListener("click", () => {
+    motion = !motion;
+    syncMotionButton();
+    if (motion && !document.hidden) {
+      resetSpecks();
+      startLoop();
+    } else {
+      stopLoop();
+      stations.forEach((site) => { specks[site.id] = []; });
+      paintAll();
+    }
+  });
+  nearestButton.addEventListener("click", () => {
+    if (nearestButton.dataset.date) setDate(nearestButton.dataset.date);
+  });
+  dateInput.addEventListener("change", () => {
+    const value = dateInput.value;
+    if (value) setDate(value);
+  });
+  canvas.addEventListener("pointerdown", (event) => {
+    drag = { x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+    canvas.style.cursor = "grabbing";
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    panBy(event.clientX - drag.x, event.clientY - drag.y);
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    paintAll();
+  });
+  canvas.addEventListener("pointerup", () => {
+    drag = null;
+    canvas.style.cursor = "grab";
+  });
+  canvas.addEventListener("pointercancel", () => {
+    drag = null;
+    canvas.style.cursor = "grab";
+  });
+  canvas.addEventListener("wheel", (event) => {
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 80 : 1;
+    const delta = event.deltaY * unit;
+    if (!delta) return;
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    zoomBy(Math.exp(-delta * 0.0016), event.clientX - rect.left, event.clientY - rect.top);
+    paintAll();
+  }, { passive: false });
+  document.addEventListener("pointerdown", (event) => {
+    if (event.target.closest(".mark") || event.target.closest(".tip")) return;
+    hideTip();
+  });
+  window.addEventListener("resize", () => {
+    markersDirty = true;
+    paintAll();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopLoop();
+      return;
+    }
+    if (motion) {
+      resetSpecks();
+      startLoop();
+    } else {
+      paintAll();
+    }
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    const watcher = new ResizeObserver(() => {
+      markersDirty = true;
+      paintAll();
+    });
+    watcher.observe(stage);
+  }
 }
 
-function openCard(site) {
-  const sample = wind[site.id];
-  chosen = site;
-  card.hidden = false;
-  document.getElementById("card-place").textContent = site.place;
-  document.getElementById("card-title").textContent = site.name;
-  document.getElementById("card-wind").textContent = sample
-    ? (sample.speed === 0
-      ? `Последний пригодный день ${sample.date}: штиль.`
-      : `Последний пригодный день ${sample.date}: ${sample.speed.toFixed(2)} м/с, ветер от ${Math.round(sample.dir)}°.`)
-    : "Пригодного ветра в архиве нет.";
-  document.getElementById("card-go").href = `/landing/dashboard?station=${site.id}`;
-  placeCard();
-}
-
-canvas.addEventListener("pointerdown", event => {
-  const site = hit(event);
-  if (site) { openCard(site); return; }
-  drag = { x: event.clientX, y: event.clientY, cx: camera.x, cy: camera.y };
-  canvas.setPointerCapture(event.pointerId);
-});
-canvas.addEventListener("pointermove", event => {
-  if (!drag) { canvas.style.cursor = hit(event) ? "pointer" : "grab"; return; }
-  camera.x = drag.cx + event.clientX - drag.x;
-  camera.y = drag.cy + event.clientY - drag.y;
-  clampCamera();
-  draw();
-});
-canvas.addEventListener("pointerup", () => { drag = null; });
-canvas.addEventListener("wheel", event => {
-  event.preventDefault();
-  camera.scale = Math.min(3.2, Math.max(1, camera.scale * (event.deltaY > 0 ? 0.92 : 1.08)));
-  clampCamera();
-  draw();
-}, { passive: false });
-window.addEventListener("resize", draw);
-
-Promise.all([
-  fetch("/landing/map/reserve.json").then(response => response.json()),
-  fetch("/landing/map/wind.json").then(response => response.json())
-]).then(([reserve, winds]) => {
-  ring = reserve.ring;
-  wind = winds;
-  const xs = ring.map(point => point[0]);
-  const ys = ring.map(point => point[1]);
+function boot(reserve, series) {
+  wind = series;
+  ring = reserve.ring || [];
+  const xs = ring.map((point) => point[0]);
+  const ys = ring.map((point) => point[1]);
   view.minX = Math.min(...xs);
   view.maxX = Math.max(...xs);
   view.minY = Math.min(...ys);
   view.maxY = Math.max(...ys);
-  draw();
+  scaleMax = series.scale_max_ms || 1;
+  datesWithData = series.dates_with_data || [];
+  stations = (reserve.stations || []).map((site) => {
+    const meta = series.stations[site.id] || {};
+    return {
+      id: site.id,
+      lon: site.lon,
+      lat: site.lat,
+      name: meta.name || site.name,
+      period: meta.period || ["0000-01-01", "0000-01-01"],
+      days: meta.days || {},
+    };
+  });
+  const flow = new Set();
+  stations.forEach((site) => {
+    const list = series.stations[site.id]?.vector_dates || [];
+    list.forEach((iso) => flow.add(iso));
+    bindMarker(site);
+  });
+  flowDates = Array.from(flow).sort();
+  dateInput.min = series.archive_start;
+  dateInput.max = series.archive_end;
+  const legend = document.getElementById("map-legend");
+  legend.replaceChildren();
+  ["0", null, `${scaleMax} м/с`].forEach((text) => {
+    const span = document.createElement("span");
+    if (text == null) span.className = "ramp";
+    else span.textContent = text;
+    legend.append(span);
+  });
+  selected = series.open_date || datesWithData[datesWithData.length - 1] || series.archive_end;
+  syncMotionButton();
+  bindControls();
+  updateChrome();
+  requestAnimationFrame(() => {
+    frameStations();
+    applyCamera();
+    resetSpecks();
+    paintAll();
+    if (motion) startLoop();
+  });
+}
+
+Promise.all([
+  fetch("/landing/map/reserve.json").then((response) => response.json()),
+  fetch("/landing/map/wind.json").then((response) => response.json()),
+]).then(([reserve, series]) => {
+  boot(reserve, series);
+}).catch(() => {
+  const note = document.querySelector(".map-notes");
+  if (note) {
+    const row = document.createElement("p");
+    row.textContent = "Не удалось прочитать архив ветра.";
+    note.append(row);
+  }
 });

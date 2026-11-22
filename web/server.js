@@ -48,7 +48,11 @@ const server = http.createServer((req, res) => {
   if (rel === "/") rel = "/index.html";
   if (rel === "/landing" || rel === "/landing/") rel = "/landing/index.html";
   if (rel === "/landing/dashboard" || rel === "/landing/dashboard/") rel = "/landing/dashboard/index.html";
-  if (rel === "/landing/map" || rel === "/landing/map/") rel = "/landing/map/index.html";
+  if (pathname === "/landing/map" || pathname === "/landing/map/") {
+    res.writeHead(302, { Location: "/landing" });
+    res.end();
+    return;
+  }
   const file = path.normalize(path.join(root, rel));
   if (!inside(file, root)) {
     res.writeHead(403);
