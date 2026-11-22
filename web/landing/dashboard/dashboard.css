@@ -142,6 +142,7 @@ h2 { font-size: 17px; line-height: 1.4; font-weight: 600; }
 .module-legend i { color: var(--series); }
 .module-plots { min-width: 0; }
 .module-plots.split { display: flex; flex-direction: column; gap: 16px; }
+.module-plots.pair-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .plot-card { min-width: 0; }
 .plot-card h3 { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .plot-card .module-legend { margin-bottom: 8px; }
@@ -223,6 +224,7 @@ h2 { font-size: 17px; line-height: 1.4; font-weight: 600; }
   .module-head .drag { margin-right: auto; }
   .module-head .drag span { display: none; }
   .module-plots.split { grid-template-columns: 1fr; }
+  .module-plots.pair-split { grid-template-columns: 1fr; }
   .mod-menu { position: fixed; top: calc(var(--header-height) + 12px); bottom: calc(var(--timeline-height) + 12px); left: 20px; right: 20px; width: auto; max-height: none; align-content: start; }
   .module-bar { align-items: flex-start; }
   .module-hint { max-width: 360px; }

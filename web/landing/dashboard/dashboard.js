@@ -1022,8 +1022,8 @@ function overlayModel(picked) {
   });
 }
 
-function drawOverlay(canvas, legend, picked) {
-  const lines = overlayModel(picked);
+function drawOverlay(canvas, legend, picked, prepared) {
+  const lines = prepared || overlayModel(picked);
   if (!canvas) return;
   if (!lines.length) {
     const { ctx, width, height } = context(canvas);
@@ -1036,7 +1036,11 @@ function drawOverlay(canvas, legend, picked) {
     return;
   }
   if (legend) {
-    legend.innerHTML = lines.map(line => `<span style="--series:${PARAMS[line.key][2]}"><i data-stat="${line.stat}"></i>${PARAMS[line.key][0]}, ${LINE_STYLE[line.stat].name}</span>`).join("");
+    legend.innerHTML = lines.map(line => {
+      const color = line.color || PARAMS[line.key][2];
+      const name = line.label || `${PARAMS[line.key][0]}, ${LINE_STYLE[line.stat].name}`;
+      return `<span style="--series:${color}"><i data-stat="${line.stat}"></i>${name}</span>`;
+    }).join("");
     if (state.impute) {
       const eligible = lines.filter(line => line.key !== "wind_dir");
       if (!eligible.length) legend.innerHTML += `<span class="impute-note">Направление ветра не интерполируется</span>`;
@@ -1112,8 +1116,9 @@ function drawOverlay(canvas, legend, picked) {
     const style = LINE_STYLE[line.stat];
     const scale = scales.get(PARAMS[line.key][1]);
     ctx.save();
-    ctx.strokeStyle = PARAMS[line.key][2];
-    ctx.fillStyle = PARAMS[line.key][2];
+    const color = line.color || PARAMS[line.key][2];
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.globalAlpha = style.alpha;
     ctx.lineWidth = style.width;
     ctx.setLineDash(style.dash);
@@ -1722,7 +1727,8 @@ function bindPlotTip(canvas) {
       const shown = estimated
         ? `${format.format(line.imputed.values[nearest])} ${PARAMS[line.key][1]}, восстановлено, не измерение`
         : value == null ? "нет" : `${format.format(value)} ${PARAMS[line.key][1]}`;
-      return `${PARAMS[line.key][0]}, ${LINE_STYLE[line.stat].name}: ${shown}`;
+      const name = line.label || PARAMS[line.key][0];
+      return `${name}, ${LINE_STYLE[line.stat].name}: ${shown}`;
     }));
     box.hidden = false;
     lines.filter(line => line.stat === "mean").forEach(line => {
@@ -1770,6 +1776,46 @@ function paintChartNow(module, node) {
     drawOverlay(canvas, legend, module.picked);
     bindPlotTip(canvas);
   }
+}
+
+function compareLines(metric) {
+  return [
+    ["kr1", "Поляна, Кр1", "#CDE9A8"],
+    ["kr2", "Поле, Кр2", "#B9D9F6"]
+  ].map(([id, label, color]) => runAsStation(id, () => overlayModel({ [metric]: ["mean"] }).map(line => {
+    line.color = color;
+    line.label = label;
+    return line;
+  }))).flat();
+}
+
+function paintCompare(module, node) {
+  const host = node.querySelector(".module-plots");
+  const legend = node.querySelector(".module-legend");
+  const metric = module.metric || "t_air";
+  const sides = [["kr1", "Поляна, Кр1", "#CDE9A8"], ["kr2", "Поле, Кр2", "#B9D9F6"]];
+  if (module.layout === "overlay") {
+    host.classList.remove("pair-split");
+    host.innerHTML = `<div class="plot plot-tall"><canvas></canvas><div class="tip" hidden></div></div>`;
+    const canvas = host.querySelector("canvas");
+    drawOverlay(canvas, legend, null, compareLines(metric));
+    bindPlotTip(canvas);
+    return;
+  }
+  host.classList.add("pair-split");
+  host.innerHTML = sides.map(([id, label]) => `<div class="plot-card"><h3>${label}</h3><p class="legend module-legend"></p><div class="plot"><canvas data-station="${id}"></canvas><div class="tip" hidden></div></div></div>`).join("");
+  if (legend) legend.innerHTML = "";
+  sides.forEach(([id, label, color]) => {
+    const canvas = host.querySelector(`[data-station="${id}"]`);
+    const cardLegend = canvas.closest(".plot-card").querySelector(".module-legend");
+    const lines = runAsStation(id, () => overlayModel({ [metric]: ["mean"] }).map(line => {
+      line.color = color;
+      line.label = label;
+      return line;
+    }));
+    drawOverlay(canvas, cardLegend, null, lines);
+    bindPlotTip(canvas);
+  });
 }
 
 function paintRose(node) {
@@ -1836,6 +1882,8 @@ function buildModule(module) {
   const remove = `<button type="button" class="remove-module" data-remove aria-label="Удалить модуль" title="Удалить модуль">×</button>`;
   if (module.kind === "rose") {
     article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">Роза ветров</h2>${remove}</header><div class="module-plots"></div>`;
+  } else if (module.kind === "compare") {
+    article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">Поляна и поле</h2><div class="layout-switch" role="group" aria-label="Сравнение поляны и поля"><button type="button" data-layout="split">Раздельно</button><button type="button" data-layout="overlay">На одном</button></div>${remove}</header><div class="module-legend legend"></div><div class="module-plots"></div>`;
   } else {
     const title = moduleTitle(module);
     article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">${title}</h2><div class="layout-switch" role="group" aria-label="Расположение графиков"><button type="button" data-layout="overlay">Вместе</button><button type="button" data-layout="split">Раздельно</button></div><div class="mod-drop"><button type="button" class="mod-toggle" aria-expanded="false" aria-controls="${module.id}-params">Параметры (0)</button><div class="mod-menu" id="${module.id}-params" aria-label="Параметры графика"></div></div>${remove}</header><div class="module-legend legend"></div><div class="module-plots"></div><p class="chart-help"><span class="outlier-key" aria-hidden="true"></span>Выбросы учтены в масштабе.</p>`;
@@ -1903,6 +1951,11 @@ function buildModule(module) {
     focusModule(state.modules[Math.min(index, state.modules.length - 1)].id);
   });
   article.querySelectorAll("[data-layout]").forEach(button => button.addEventListener("click", () => {
+    if (module.kind === "compare") {
+      module.layout = button.dataset.layout;
+      update();
+      return;
+    }
     if (button.dataset.layout === "split") separateModule(module);
     else {
       module.layout = "overlay";
@@ -1984,6 +2037,7 @@ function paintModules() {
       toggle.textContent = `Параметры (${count})`;
     }
     if (module.kind === "rose") paintRose(node);
+    else if (module.kind === "compare") paintCompare(module, node);
     else {
       paintChart(module, node);
       const help = node.querySelector(".chart-help");
@@ -2046,10 +2100,7 @@ function applyPreset(name) {
     const stamp = Date.now();
     state.metric = "t_air";
     state.view = "series";
-    state.modules = [
-      { id: `mod-${stamp}`, kind: "chart", layout: "overlay", station: "kr1", title: "Поляна, Кр1", picked: { t_air: ["mean"] } },
-      { id: `mod-${stamp + 1}`, kind: "chart", layout: "overlay", station: "kr2", title: "Поле, Кр2", picked: { t_air: ["mean"] } }
-    ];
+    state.modules = [{ id: `mod-${stamp}`, kind: "compare", layout: "split", metric: "t_air", title: "Поляна и поле" }];
     setStation("kr1");
     state.from = clampIndex(dayIndex("2025-01-01"));
     state.to = clampIndex(dayIndex("2025-12-31"));
