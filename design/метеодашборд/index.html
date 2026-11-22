@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Метеомониторинг · Урочище Красное</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script defer src="weather-data.js"></script>
+  <script defer src="dashboard.js"></script>
+</head>
+<body>
+<main class="page">
+  <header class="header">
+    <div class="identity"><span class="station-mark" aria-hidden="true"></span><span>Центрально-Лесной заповедник</span></div>
+    <a class="excel-link" href="weather-check.xlsx" download><span class="excel-icon" aria-hidden="true">X</span> Сверка в Excel</a>
+  </header>
+  <section class="intro" aria-labelledby="title">
+    <p class="eyebrow">Урочище Красное</p>
+    <h1 id="title">Метеомониторинг</h1>
+    <p>Архив наблюдений станций и динамика микроклимата.</p>
+  </section>
+  <section class="filters" aria-label="Фильтры наблюдений">
+    <label>Станция<select id="station"><option value="ame60">АМЕ-60</option><option value="kr1">Сокол М1 · Кр1, поляна</option><option value="kr2">Сокол М1 · Кр2, поле</option></select></label>
+    <label>Показатель<select id="metric"></select></label>
+    <label>Начало<input id="date-start" type="date"></label>
+    <label>Конец<input id="date-end" type="date"></label>
+  </section>
+  <section class="stats" id="stats" aria-label="Сводка периода"></section>
+  <div class="layout">
+    <section class="panel plot-panel" aria-labelledby="chart-title">
+      <div class="plot-header">
+        <div><p class="eyebrow" id="chart-unit"></p><h2 id="chart-title">Температура воздуха</h2></div>
+        <div class="segments" aria-label="Шаг графика" role="group"><button type="button" data-step="day" aria-pressed="true">Дни</button><button type="button" data-step="month" aria-pressed="false">Месяцы</button></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="plot" id="plot">
+        <canvas id="chart" tabindex="0" aria-label="График наблюдений. Используйте стрелки влево и вправо для просмотра точек."></canvas>
+        <div class="tooltip" id="tooltip" hidden></div>
+      </div>
+      <div class="time-control">
+        <div class="time-header"><h3>Временная шкала</h3><div class="presets" aria-label="Быстрый выбор периода" role="group"><button type="button" data-window="30">30 дней</button><button type="button" data-window="90">90 дней</button><button type="button" data-window="all">Весь архив</button></div></div>
+        <div class="brush" id="brush">
+          <canvas id="overview" aria-hidden="true"></canvas><div id="selection" class="selection"></div>
+          <input type="range" id="range-start" aria-label="Начало выбранного периода">
+          <input type="range" id="range-end" aria-label="Конец выбранного периода">
+        </div>
+        <div class="time-labels"><span id="archive-start"></span><span id="archive-end"></span></div>
+      </div>
+      <details class="observations" id="observations">
+        <summary>Точки на графике и покрытие</summary>
+        <div class="table-scroll"><table><thead><tr><th>Период</th><th>Значение</th><th>Покрытие</th><th>Статус</th></tr></thead><tbody id="records"></tbody></table></div>
+      </details>
+    </section>
+    <aside class="insights" aria-labelledby="insights-title">
+      <h2 id="insights-title">Тренды и гипотезы</h2>
+      <section class="panel insight trend"><p class="eyebrow">Тренд в выбранном окне</p><p class="trend-value" id="trend-value"></p><p id="trend-note"></p><label class="toggle"><input type="checkbox" id="trend-toggle" checked> Линия тренда</label></section>
+      <section class="panel insight"><p class="eyebrow">Что видно в данных</p><h3 id="finding-title"></h3><p id="finding-note"></p><button id="pressure-example" class="text-button" type="button">Проверить давление Кр1 в 2024 году</button></section>
+      <section class="panel insight hypothesis"><p class="eyebrow">Что проверить заповеднику</p><h3 id="hypothesis-title"></h3><p id="hypothesis-note"></p></section>
+    </aside>
+  </div>
+  <footer><span>Выборка архива · АМЕ-60 за 2014–2016, Кр1 и Кр2 за 2024–2025</span><span>Excel-сверка содержит два контрольных примера.</span></footer>
+</main>
+</body>
+</html>
