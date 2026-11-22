@@ -11,4 +11,3 @@ asyncpg
 bcrypt
 pyjwt
 alembic
-XlsxWriter
