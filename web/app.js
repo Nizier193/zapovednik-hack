@@ -198,11 +198,14 @@ pressureYear.addEventListener("change", showPressureNote);
 document.getElementById("upload-file").addEventListener("change", (event) => {
   const file = event.target.files && event.target.files[0];
   const report = document.getElementById("upload-report");
+  const uploadName = document.getElementById("upload-name");
   const place = document.getElementById("upload-station").selectedOptions[0].textContent;
   if (!file) {
+    uploadName.textContent = "не выбран";
     report.textContent = "Файл ещё не выбран.";
     return;
   }
+  uploadName.textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => {
     const firstLine = String(reader.result).split(/\r?\n/)[0] || "";

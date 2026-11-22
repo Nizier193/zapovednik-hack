@@ -77,6 +77,29 @@ body {
   line-height: 1.45;
 }
 
+.page {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 280px;
+  gap: 28px;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 24px 40px;
+  align-items: start;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  padding-top: 8px;
+}
+
+.rail svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 h1, h2, p { margin: 0; }
 
 h1, h2 {
@@ -90,11 +113,13 @@ button, select, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 
 .desk {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  width: min(1180px, calc(100% - 48px));
-  margin: 0 auto;
+  width: auto;
+  margin: 0;
 }
 
 .mast {
@@ -105,10 +130,20 @@ button { cursor: pointer; }
   padding: 28px 0 18px;
 }
 
+.mast-copy { position: relative; z-index: 1; }
+
 .where {
   font-family: "Roboto Mono", Consolas, monospace;
   font-size: 13px;
   color: var(--muted);
+}
+
+.mark {
+  display: block;
+  height: 96px;
+  width: auto;
+  flex: none;
+  align-self: flex-start;
 }
 
 h1 {
@@ -145,9 +180,10 @@ h2 {
 }
 
 .spruce {
-  width: min(180px, 28vw);
+  width: 150px;
   height: auto;
-  align-self: center;
+  align-self: flex-start;
+  flex: none;
 }
 
 .sheet { padding-bottom: 28px; }
@@ -169,8 +205,7 @@ h2 {
 }
 
 .instrument select,
-.instrument input[type="date"],
-.instrument input[type="file"] {
+.instrument input[type="date"] {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -179,6 +214,42 @@ h2 {
   font-family: "Inter", sans-serif;
   font-size: 16px;
   color: var(--ink);
+}
+
+.file-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+}
+
+.file-pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--ink);
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+}
+
+.file-name {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .instrument button {
@@ -194,6 +265,11 @@ h2 {
 .sheets button:focus-visible,
 .instrument select:focus-visible,
 .instrument input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.file-pick input:focus-visible + .file-btn {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -285,14 +361,48 @@ th { color: var(--muted); font-weight: 400; }
   padding: 16px;
 }
 
+.crew {
+  width: 100%;
+  margin: 0;
+  padding: 8px 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.crew img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.crew figcaption {
+  margin: 0 0 8px;
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 .forest-floor {
-  margin-top: auto;
+  margin-top: 12px;
   height: 120px;
   background: url("assets/forest-shadow.png") right bottom / auto 120px no-repeat;
 }
 
-@media (max-width: 800px) {
-  .desk { width: calc(100% - 28px); }
+@media (max-width: 1100px) {
+  .page {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .rail svg { width: 140px; }
+  .crew { width: min(360px, 100%); }
   .mast { flex-direction: column; align-items: flex-start; }
   .spruce { width: 120px; }
   .spread, .split-quiet { grid-template-columns: 1fr; }
