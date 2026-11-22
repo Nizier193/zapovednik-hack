@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Полевой журнал</title>
+  <link rel="stylesheet" href="/landing/landing.css">
+</head>
+<body>
+  <canvas id="ascii-field" aria-hidden="true"></canvas>
+  <div class="intro" id="intro">
+    <canvas id="intro-source"></canvas>
+    <div id="intro-content" class="intro-fallback">
+      <p class="intro-kicker">ЦУ</p>
+      <p class="intro-title">Полевой журнал</p>
+      <p class="intro-sub">Центрально-Лесной заповедник</p>
+    </div>
+    <canvas id="intro-output"></canvas>
+    <p class="intro-hint">нажмите, чтобы открыть</p>
+  </div>
+
+  <header class="nav">
+    <a class="brand" href="/landing">
+      <img src="/assets/cu-mark.png?v=2" alt="ЦУ" width="88" height="64">
+      <span>Полевой журнал</span>
+    </a>
+    <nav aria-label="Страницы">
+      <a href="#rows">Станции</a>
+      <a href="#limits">Ограничения</a>
+      <a href="#team">Команда</a>
+      <a href="/landing/dashboard">Архив</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1>Полевой журнал</h1>
+        <p class="lede">Центрально-Лесной заповедник, урочище Красное. АМЕ-60 и Сокол стоят в разных точках и в разные годы, ряды не соединяются.</p>
+        <a class="go" href="/landing/dashboard">Смотреть архив</a>
+      </div>
+      <aside class="hole">
+        <p>Дыра АМЕ-60 с 4 января 1999 по 17 августа 2003. Файлов за 2000, 2001 и 2002 нет.</p>
+      </aside>
+    </section>
+
+    <section class="block" id="rows">
+      <h2>Станции</h2>
+      <table>
+        <thead>
+          <tr><th>Прибор</th><th>Где стоит</th><th>Срок</th><th>Сутки входят в счёт</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>АМЕ-60</td><td>урочище Красное</td><td>1 июля 1992 по 31 декабря 2021</td><td>72 срока из 96</td></tr>
+          <tr><td>Сокол М1, Кр1</td><td>поляна</td><td>1 января 2022 по 31 декабря 2025</td><td>18 разных часов из 24</td></tr>
+          <tr><td>Сокол М1, Кр2</td><td>поле</td><td>1 января 2022 по 31 декабря 2025</td><td>18 разных часов из 24</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Месяц входит в счёт, если неполных суток не больше 10 и нет пяти подряд. Среднее на экране архива подписано как среднее за выбранный период, рядом число лет.</p>
+    </section>
+
+    <section class="block" id="limits">
+      <h2>Ограничения ряда</h2>
+      <ul class="limits">
+        <li>АМЕ-60 и Сокол не соединять. Общего периода нет, линию через 31 декабря 2021 и 1 января 2022 не строить.</li>
+        <li>Это не норма ВМО. Для января валидных лет около 14 из 30, норму по этим файлам не набрать.</li>
+        <li>Свой прогноз по площадке не строить. Время в файлах не сдвигать.</li>
+        <li>Направления ветра у АМЕ-60 нет в 1998 году, в 2021 оно недостоверно. Розу за эти годы не строить.</li>
+        <li>Давление Кр1 за 2024: 1362 значения вне 940-1050 гПа. В месячном давлении апреля нет. Остаются 11 месяцев и 334 суток.</li>
+        <li>Полные годы АМЕ-60, все 12 месяцев: 1993, 2004, 2005, 2009, 2010, 2014, 2015, 2016. У Кр1 и Кр2 полные годы: 2024 и 2025.</li>
+      </ul>
+    </section>
+
+    <section class="block team" id="team">
+      <figure class="crew">
+        <figcaption>лучший дрим-тим: Название_команды_не_забыть_изменить</figcaption>
+        <div class="photo" id="crew-photo">
+          <canvas class="src"></canvas>
+          <img class="slot" src="/assets/crew.jpg" alt="Команда: четверо с плюшевыми тюленями">
+          <canvas class="out"></canvas>
+        </div>
+      </figure>
+      <div>
+        <h2>Смена</h2>
+        <p>Архив рядом считает сутки и месяцы отдельно по АМЕ-60, Кр1 и Кр2.</p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/landing/landing.js"></script>
+</body>
+</html>
