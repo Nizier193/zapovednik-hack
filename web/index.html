@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Полевой журнал. Красное</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="desk">
+    <header class="mast">
+      <div class="mast-copy">
+        <p class="where">Центрально-Лесной заповедник, урочище Красное</p>
+        <h1>Полевой журнал</h1>
+        <nav class="sheets" aria-label="Разделы журнала">
+          <button type="button" data-sheet="journal" aria-pressed="true">Журнал</button>
+          <button type="button" data-sheet="compare" aria-pressed="false">Поляна и поле</button>
+          <button type="button" data-sheet="pressure" aria-pressed="false">Давление</button>
+          <button type="button" data-sheet="forecast" aria-pressed="false">Прогноз</button>
+          <button type="button" data-sheet="upload" aria-pressed="false">Новый файл</button>
+        </nav>
+      </div>
+      <img class="spruce" src="assets/spruce-tip.png" alt="">
+    </header>
+
+    <section class="sheet" id="journal" aria-label="Журнал станции">
+      <form class="instrument" id="instrument">
+        <label>Станция
+          <select name="station" id="station"></select>
+        </label>
+        <label>Параметр
+          <select name="parameter" id="parameter"></select>
+        </label>
+        <label>С
+          <input type="date" name="from" id="from">
+        </label>
+        <label>По
+          <input type="date" name="to" id="to">
+        </label>
+        <button type="submit">Показать</button>
+      </form>
+      <div class="spread">
+        <div class="reading" id="reading">
+          <p class="reading-title" id="reading-title"></p>
+          <p class="refusal" id="refusal" hidden></p>
+          <table id="daybook">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Сроков</th>
+                <th>Среднее</th>
+                <th>Заметка</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="4" id="empty-note"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="plot-well" aria-hidden="true">
+            <img src="assets/contour-lines.png" alt="">
+            <p>График валидных суток появится здесь, когда CSV ляжет на диск. Числа заранее не рисуем.</p>
+          </div>
+        </div>
+        <aside class="margin" id="margin"></aside>
+      </div>
+    </section>
+
+    <section class="sheet" id="compare" hidden aria-label="Поляна и поле за 2025">
+      <h2>Поляна и поле, 2025</h2>
+      <p class="lead">Две площадки Сокола за один год. Кр1 минус Кр2 по температуре воздуха. Это не новая станция и не продолжение АМЕ-60.</p>
+      <div class="spread">
+        <div class="reading">
+          <table>
+            <thead>
+              <tr>
+                <th>Месяц 2025</th>
+                <th>Кр1, поляна</th>
+                <th>Кр2, поле</th>
+                <th>Разница</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="4">Месячные средние посчитаем из файлов Кр1 и Кр2. Пока ряд на сервис не загружен, ячейки пустые, а не нули.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="lead">Второй лист этого раздела: средний суточный ход, две линии, час из исходной метки времени.</p>
+        </div>
+        <aside class="margin">
+          <p class="where">Как читать</p>
+          <p>Пустой месяц остаётся пустым. Если у одной площадки месяц не прошёл правило полноты, разницу за этот месяц не ставим.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="sheet" id="pressure" hidden aria-label="Давление Сокола">
+      <h2>Давление Сокола</h2>
+      <p class="lead">Только Кр1 и Кр2, колонка pressure_hpa. У АМЕ-60 давления нет. У Кр1 за 2024 в месячное давление не входит апрель: 1362 значения вне 940-1050 гПа, по годным часам 334 суток и 11 месяцев. На температуру апреля этот запрет не переносится.</p>
+      <form class="instrument" id="pressure-form">
+        <label>Площадка
+          <select id="pressure-station">
+            <option value="kr1">Кр1, поляна</option>
+            <option value="kr2">Кр2, поле</option>
+          </select>
+        </label>
+        <label>Год
+          <select id="pressure-year">
+            <option>2022</option>
+            <option>2023</option>
+            <option>2024</option>
+            <option selected>2025</option>
+          </select>
+        </label>
+      </form>
+      <p id="pressure-note" class="lead"></p>
+    </section>
+
+    <section class="sheet" id="forecast" hidden aria-label="Внешний прогноз">
+      <h2>Прогноз на ближайшие сутки</h2>
+      <div class="split-quiet">
+        <div>
+          <p class="where">Последние наблюдения</p>
+          <p>Здесь будет дата последних валидных суток Сокола. Сейчас файла на диске нет, поэтому дата не подставлена.</p>
+        </div>
+        <div class="forecast-pane">
+          <p class="where">Внешний сервис</p>
+          <p>Свою модель не строим. Прогноз запрашивается отдельно и в архив не пишется. Сервис ещё не подключён, координату урочища нужно подтвердить.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sheet" id="upload" hidden aria-label="Новый файл">
+      <h2>Новый файл того же формата</h2>
+      <p class="lead">CSV с колонкой datetime и параметрами станции. Время не переводим и не округляем. Чужой набор колонок в ряд не кладём.</p>
+      <form class="instrument" id="upload-form">
+        <label>Куда отнести
+          <select id="upload-station">
+            <option value="ame">АМЕ-60</option>
+            <option value="kr1">Сокол, Кр1</option>
+            <option value="kr2">Сокол, Кр2</option>
+          </select>
+        </label>
+        <label>Файл
+          <input type="file" id="upload-file" accept=".csv,text/csv">
+        </label>
+      </form>
+      <p id="upload-report" class="lead">Файл ещё не выбран. На этом шаге проверяется только шапка, на диск сервис его не пишет.</p>
+    </section>
+
+    <footer class="forest-floor" aria-hidden="true"></footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

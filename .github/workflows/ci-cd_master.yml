@@ -25,7 +25,7 @@ jobs:
             service:
               - backend
               - telegram-bot
-              - streamlit-visualization
+              - web
             include:
               - service: backend
                 dockerfile: ./backend/Dockerfile
@@ -35,9 +35,9 @@ jobs:
                 dockerfile: ./telegram-bot/Dockerfile
                 context: ./telegram-bot
 
-              - service: streamlit-visualization
-                dockerfile: ./streamlit-visualization/Dockerfile
-                context: ./streamlit-visualization
+              - service: web
+                dockerfile: Dockerfile
+                context: ./web
 
         steps:
           # Для получения кода в джобе
@@ -85,7 +85,7 @@ jobs:
             run: |
               docker pull ${{ secrets.DOCKER_USERNAME }}/${{ vars.DOCKER_CI_TAG }}-backend:develop-${{ github.sha }}
               docker pull ${{ secrets.DOCKER_USERNAME }}/${{ vars.DOCKER_CI_TAG }}-telegram-bot:develop-${{ github.sha }}
-              docker pull ${{ secrets.DOCKER_USERNAME }}/${{ vars.DOCKER_CI_TAG }}-streamlit-visualization:develop-${{ github.sha }}
+              docker pull ${{ secrets.DOCKER_USERNAME }}/${{ vars.DOCKER_CI_TAG }}-web:develop-${{ github.sha }}
 
           # С префиксом, юзернеймом и тегом
           - name: Start containers for testing
@@ -126,11 +126,11 @@ jobs:
             service:
               - backend
               - telegram-bot
-              - streamlit-visualization
+              - web
             include:
               - service: backend
               - service: telegram-bot
-              - service: streamlit-visualization
+              - service: web
 
         steps:
           - name: Docker login

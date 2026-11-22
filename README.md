@@ -2,7 +2,7 @@
 
 Шаблон в базовой комплектации с:
 
-- **[Streamlit](streamlit-visualization/README.md)**
+- **Веб-журнал** (`web/`, порт 8501)
 - **[Backend](backend/README.md)**
 - **[Telegram bot](telegram-bot/README.md)**
 - PostgresDB

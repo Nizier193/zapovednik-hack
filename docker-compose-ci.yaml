@@ -1,6 +1,6 @@
 services:
-  streamlit-visualization:
-    image: ${DOCKER_USERNAME}/${DOCKER_PREFIX}-streamlit-visualization:${TAG}
+  web:
+    image: ${DOCKER_USERNAME}/${DOCKER_PREFIX}-web:${TAG}
     ports:
       - "8501:8501"
     env_file:

@@ -1,15 +1,12 @@
 services:
-  streamlit-visualization:
-    build: ./streamlit-visualization
+  web:
+    build: ./web
     ports:
       - "8501:8501"
-    env_file:
-      - .env
     networks:
       - app-network
     volumes:
-      # Монтируем приложение целиком, чтобы логи и код писались на хост
-      - ./streamlit-visualization/app:/app
+      - ./web:/app
 
   backend:
     build: ./backend
