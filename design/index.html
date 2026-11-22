@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Заповедный хакатон · Дизайн-концепции</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  * { box-sizing: border-box; }
+  :root { font-family: 'Aptos', 'Segoe UI', sans-serif; color: #22372b; background: #eff0e8; }
+  body { margin: 0; }
+  button, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; opacity: .43; }
+  button:focus-visible, a:focus-visible, textarea:focus-visible { outline: 2px solid #43734b; outline-offset: 4px; }
+  h1, h2, h3, p { margin: 0; }
+  [hidden] { display: none !important; }
+  .shell { width: min(1216px, calc(100% - 64px)); margin: 0 auto; }
+  .masthead { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 23px 0; }
+  .brand { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+  .brand-mark { display: grid; place-items: center; width: 25px; aspect-ratio: 1; border-radius: 50%; background: #284c36; }
+  .brand-mark::after { content: ''; width: 8px; height: 11px; border-radius: 8px 0 8px 0; background: #d1eca4; transform: rotate(12deg); }
+  .link { color: #2d543b; text-underline-offset: 4px; font-weight: 650; }
+  .intro { padding: 35px 0 26px; }
+  .intro h1 { color: #132b20; font-size: clamp(32px, 4.2vw, 55px); font-weight: 500; line-height: 1.06; letter-spacing: -.048em; }
+  .intro p { margin-top: 13px; color: #4c6052; font-size: 17px; }
+  .workbench { display: grid; grid-template-columns: minmax(0, 1fr) 286px; gap: 20px; align-items: start; }
+  .viewer, .sidebar { border: 1px solid #d0d8ca; border-radius: 21px; background: #f9faf4; }
+  .viewer { min-width: 0; padding: 12px; }
+  .toolbar, .slide-controls { display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+  .toolbar { margin-bottom: 12px; }
+  .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #e9eee2; }
+  .segmented button, .plain-button, .slide-controls button, .slide-jump button { border: 0; background: transparent; color: #334b3d; border-radius: 7px; }
+  .segmented button, .plain-button { padding: 7px 11px; font-weight: 650; font-size: .92rem; }
+  .segmented [aria-pressed="true"] { color: #f5f7ee; background: #254735; }
+  .plain-button:hover, .slide-controls button:not(:disabled):hover, .slide-jump button:hover { background: #e8ede0; }
+  .sidebar { padding: 18px; }
+  .sidebar h2 { font-size: 1rem; letter-spacing: -.02em; }
+  .choices { display: grid; gap: 8px; margin-top: 11px; }
+  .theme-choice { width: 100%; text-align: left; padding: 12px; display: grid; grid-template-columns: 45px 1fr; align-items: center; gap: 11px; color: #203b2a; background: #f3f5ed; border: 1px solid #dae0d5; border-radius: 12px; }
+  .theme-choice:hover, .theme-choice[aria-pressed="true"] { background: #e8efde; border-color: #71936f; }
+  .theme-choice strong, .theme-choice small { display: block; }
+  .theme-choice small { color: #4a6052; margin-top: 3px; font-size: .76rem; line-height: 1.25; }
+  .mini { display: block; height: 39px; position: relative; overflow: hidden; border-radius: 6px; background: var(--mini-bg); }
+  .mini::before { content: ''; position: absolute; width: 28px; height: 28px; border-radius: 50%; right: -5px; top: -3px; border: 1px solid var(--mini-accent); box-shadow: 0 0 0 3px var(--mini-bg), 0 0 0 4px var(--mini-accent), 0 0 0 7px var(--mini-bg), 0 0 0 8px var(--mini-accent); }
+  .mini::after { content: ''; position: absolute; width: 15px; height: 3px; top: 24px; left: 6px; background: var(--mini-accent); }
+  .sidebar-note { margin-top: 15px; padding-top: 13px; border-top: 1px solid #d7ded1; font-size: .87rem; line-height: 1.5; color: #465b4c; }
+  .slide-controls { margin-top: 10px; }
+  .slide-jump { display: flex; flex-wrap: wrap; gap: 3px; }
+  .slide-jump button, .slide-controls .arrow { padding: 6px 8px; font-size: .83rem; }
+  .slide-jump [aria-current="step"] { color: #24452e; background: #e0ebd5; font-weight: 700; }
+  .arrow-group { display: flex; flex: 0 0 auto; gap: 2px; }
+  .arrow-group .arrow { min-width: 30px; font-size: 1rem; }
+  .stage { overflow: hidden; border-radius: 12px; container-type: inline-size; }
+  .slide { position: relative; isolation: isolate; aspect-ratio: 16/9; display: flex; flex-direction: column; padding: 5cqw 5.5cqw 3.7cqw; font-size: 2.1cqw; line-height: 1.3; overflow: hidden; }
+  .slide-top, .slide-foot { display: flex; justify-content: space-between; align-items: center; gap: 2cqw; flex: 0 0 auto; }
+  .slide-top { padding-bottom: 1.6cqw; }
+  .slide-foot { margin-top: auto; padding-top: 1.55cqw; border-top: 1px solid var(--line); }
+  .slide-foot .pfp-label:last-child { color: var(--accent); }
+  .slide h2 { font-family: var(--display); font-size: 5.1cqw; font-weight: 500; line-height: 1.02; letter-spacing: -.04em; text-wrap: balance; }
+  .slide-title { margin: 2.1cqw 0 2.6cqw; }
+  .slide .pfp-card { padding: 1.55cqw; border-radius: min(var(--radius), 1.65cqw); }
+  .cover-inner { display: grid; grid-template-columns: 58% 42%; align-items: center; flex: 1 1 0; min-height: 0; position: relative; }
+  .cover-copy { z-index: 1; }
+  .cover-copy h2 { font-size: 8.15cqw; line-height: .96; letter-spacing: -.048em; }
+  .cover-copy h2 span { display: block; color: var(--accent); }
+  .cover-copy p { color: var(--muted); margin-top: 2.1cqw; max-width: 45cqw; font-size: 2.15cqw; }
+  .cover-art { margin: 1.8cqw 0 1.8cqw 1cqw; height: calc(100% - 3.6cqw); position: relative; overflow: hidden; border-radius: min(var(--radius), 1.65cqw); background: var(--surface); }
+  .cover-art::before { content: ''; position: absolute; inset: 0; opacity: .56; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: 4.4cqw 4.4cqw; }
+  .terrain { position: absolute; width: 70%; height: 70%; left: 15%; top: 10%; transform: rotate(-29deg); }
+  .terrain i { position: absolute; inset: calc(var(--n) * 3.9%); transform: translate(calc(var(--n) * .45cqw), calc(var(--n) * .12cqw)) rotate(calc(var(--n) * 4deg)); border: 1px solid var(--art-ink, var(--accent)); opacity: calc(.37 + var(--n) * .06); border-radius: 48% 52% 55% 45% / 40% 57% 43% 60%; }
+  [data-theme="forest"] .cover-art { background: radial-gradient(ellipse at 70% 39%, #345740, #182e24 75%); }
+  [data-theme="paper"] .cover-inner { grid-template-columns: 61% 39%; }
+  [data-theme="paper"] .cover-copy h2 { font-size: 8.45cqw; }
+  [data-theme="paper"] .cover-copy h2 span { font-style: italic; }
+  [data-theme="paper"] .cover-art { border: 1px solid var(--line); }
+  [data-theme="signal"] .cover-art { --art-ink: #283015; background: var(--accent); }
+  [data-theme="signal"] .cover-copy h2 { font-size: 7.8cqw; }
+  [data-theme="signal"] .cover-copy h2 span { display: inline-block; background: var(--accent); color: var(--accent-ink); padding: .22cqw 1cqw .65cqw .45cqw; margin-top: .7cqw; }
+  [data-theme="signal"] .cover-art::before { opacity: .2; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.7cqw; margin-bottom: 2.3cqw; }
+  .slide .pfp-card h3 { margin: .85cqw 0 .55cqw; font-size: 2.65cqw; font-weight: 600; line-height: 1.1; letter-spacing: -.025em; }
+  .slide .pfp-card p { color: var(--muted); font-size: 1.86cqw; }
+  .slide .pfp-table { font-size: 1.82cqw; }
+  .slide .pfp-table th, .slide .pfp-table td { padding: .64cqw .5cqw; }
+  .takeaway { padding-left: 1.4cqw; border-left: .38cqw solid var(--accent); font-size: 2.05cqw; margin-top: 1.1cqw; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5cqw; margin-bottom: 1.1cqw; }
+  .step-index { display: grid; place-items: center; width: 4cqw; aspect-ratio: 1; border-radius: 50%; color: var(--accent-ink); background: var(--accent); font: 700 1.55cqw var(--mono); }
+  .viewer:fullscreen { display: grid; place-items: center; padding: 0; border: 0; background: #101512; }
+  .viewer:fullscreen .stage { width: min(100vw, 177.7778vh); border-radius: 0; }
+  .viewer:fullscreen .toolbar, .viewer:fullscreen .slide-controls { display: none; }
+  .dashboard { min-height: 52cqw; padding: 3.1cqw; font-size: clamp(11px, 1.75cqw, 16px); line-height: 1.35; }
+  .dash-head { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin-bottom: 1.9cqw; }
+  .dash-head h2 { font: 500 clamp(21px, 4.15cqw, 39px)/1.03 var(--display); letter-spacing: -.04em; margin-top: .5cqw; }
+  .dash-head label { display: grid; gap: 4px; flex: 0 0 auto; }
+  .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.15cqw; margin-bottom: 1.15cqw; }
+  .kpis .pfp-card { padding: 1.45cqw; }
+  .kpis .pfp-number { margin: .65cqw 0 .3cqw; }
+  .kpis .highlight { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .kpis .highlight .pfp-label { color: inherit; }
+  .dash-grid { display: grid; grid-template-columns: .95fr 1.05fr; gap: 1.15cqw; }
+  .dash-grid .pfp-card { padding: 1.45cqw; }
+  .dash-grid h3 { font-size: 1.15em; margin-bottom: .85cqw; }
+  .dash-note { color: var(--muted); font-size: .83em; margin-top: 1.25cqw; }
+  .kit { margin: 33px 0 0; scroll-margin-top: 15px; }
+  .kit > h2 { font-size: clamp(24px, 2.6vw, 33px); font-weight: 500; line-height: 1.1; letter-spacing: -.04em; margin-bottom: 13px; }
+  .kit-demo { padding: 14px; display: grid; grid-template-columns: 1fr 1fr 1.13fr; gap: 11px; border-radius: 16px; }
+  .kit-demo h3 { font-size: .95rem; margin-bottom: 10px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .swatch { min-width: 0; color: var(--muted); text-align: center; font: 600 clamp(9px, 1.06vw, 12px)/1.3 var(--mono); }
+  .swatch i { display: block; height: 30px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 4px; }
+  .swatch span { display: block; font: 600 11px var(--font); margin-top: 2px; }
+  .type-test { font: 500 clamp(20px, 2.45vw, 29px)/1.06 var(--display); letter-spacing: -.035em; margin-bottom: 5px; }
+  .type-info { color: var(--muted); font-size: .82rem; line-height: 1.4; }
+  .status-samples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .prompt { margin: 21px 0 30px; border-block: 1px solid #ccd7c9; padding: 14px 0; }
+  .prompt summary { cursor: pointer; font-weight: 700; }
+  .prompt textarea { display: block; width: 100%; min-height: 200px; padding: 13px; margin-top: 11px; color: #243a2e; background: #f9faf4; border: 1px solid #cbd6c7; border-radius: 10px; resize: vertical; line-height: 1.5; }
+  .prompt .plain-button { margin-top: 8px; background: #dce9d6; }
+  footer { padding-bottom: 28px; color: #475d4d; font-size: .82rem; }
+  @media (max-width: 935px) {
+    .shell { width: min(100% - 32px, 770px); }
+    .workbench { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .sidebar { grid-row: 1; padding: 12px; }
+    .choices { grid-template-columns: repeat(3, 1fr); }
+    .sidebar-note { margin-top: 9px; padding-top: 9px; }
+  }
+  @media (max-width: 520px) {
+    .shell { width: calc(100% - 22px); }
+    .masthead { padding: 14px 0; font-size: .84rem; }
+    .intro { padding: 24px 0 19px; }
+    .intro p { font-size: .93rem; }
+    .choices { gap: 5px; }
+    .theme-choice { grid-template-columns: 1fr; gap: 5px; padding: 6px; font-size: .8rem; }
+    .theme-choice small { display: none; }
+    .mini { height: 23px; }
+    .viewer { padding: 7px; }
+    .toolbar { margin-bottom: 7px; }
+    .segmented button, .plain-button { font-size: .79rem; padding: 6px; }
+    .slide-controls { align-items: start; }
+    .slide-jump button { padding: 5px; font-size: .72rem; }
+    .kit-demo { grid-template-columns: 1fr; }
+    .dash-grid { grid-template-columns: 1fr; }
+    .dash-head { align-items: start; }
+    .kpis .pfp-label { letter-spacing: 0; }
+    .kpis .pfp-number { font-size: 1.9em; }
+    .dash-grid .pfp-card { padding: 7px; }
+  }
+</style>
+<main class="shell">
+  <header class="masthead">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Заповедный хакатон</div>
+    <a class="link" href="#components">Элементы и CSS ↓</a>
+  </header>
+  <section class="intro">
+    <h1>Три стиля для защиты</h1>
+    <p>Сравните, как одна визуальная система работает на слайдах и в дашборде.</p>
+  </section>
+  <div class="workbench">
+    <section class="viewer" id="viewer" aria-label="Предпросмотр">
+      <div class="toolbar">
+        <div class="segmented" role="group" aria-label="Тип макета">
+          <button type="button" data-view="slides" aria-pressed="true">Слайды</button>
+          <button type="button" data-view="dashboard" aria-pressed="false">Дашборд</button>
+        </div>
+        <button class="plain-button" type="button" id="fullscreen">На весь экран ↗</button>
+      </div>
+      <div class="pfp-theme stage" id="stage" data-theme="forest">
+        <article class="slide" data-slide="0" aria-label="Обложка">
+          <div class="slide-top"><span class="pfp-label">Хакатон ПФП</span><span class="pfp-label">Защита проекта</span></div>
+          <div class="cover-inner">
+            <div class="cover-copy"><h2>Природа <span>в данных</span></h2><p>Оцифровка наблюдений из «Летописей природы»</p></div>
+            <div class="cover-art" aria-hidden="true">
+              <div class="terrain"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i><i style="--n:8"></i><i style="--n:9"></i></div>
+            </div>
+          </div>
+          <div class="slide-foot"><span class="pfp-label">[Название команды]</span><span class="pfp-label">01 / 04</span></div>
+        </article>
+        <article class="slide" data-slide="1" aria-label="Результат" hidden>
+          <div class="slide-top"><span class="pfp-label">Хакатон ПФП</span><span class="pfp-label">Результат задачи · 35%</span></div>
+          <h2 class="slide-title">От фрагмента к записи</h2>
+          <div class="split">
+            <div class="pfp-card"><span class="pfp-label">Входные данные</span><h3>Исходный документ</h3><p>[Вставьте цитату или скриншот. Выделите сведения, которые извлекает прототип.]</p></div>
+            <div class="pfp-card"><span class="pfp-label">Выход прототипа</span><table class="pfp-table"><thead><tr><th scope="col">Поле</th><th scope="col">Значение</th></tr></thead><tbody><tr><td>Дата</td><td>[Из источника]</td></tr><tr><td>Вид</td><td>[Из источника]</td></tr><tr><td>Место</td><td>[Из источника]</td></tr></tbody></table></div>
+          </div>
+          <p class="takeaway">[Объясните, что правильно извлечено и как это проверить.]</p>
+          <div class="slide-foot"><span class="pfp-label">Качество решения</span><span class="pfp-label">02 / 04</span></div>
+        </article>
+        <article class="slide" data-slide="2" aria-label="Проверка и ограничения" hidden>
+          <div class="slide-top"><span class="pfp-label">Хакатон ПФП</span><span class="pfp-label">Проверка и ограничения · 20%</span></div>
+          <h2 class="slide-title">Где прототип справляется?</h2>
+          <div class="split">
+            <div class="pfp-card"><span class="pfp-status">Совпало</span><h3>Удачный случай</h3><p>[Покажите совпадение с источником или результат ручной проверки.]</p></div>
+            <div class="pfp-card"><span class="pfp-status" data-status="review">На проверку</span><h3>Ошибка или ограничение</h3><p>[Покажите реальный сбой, объясните его причину и последствия.]</p></div>
+          </div>
+          <p class="takeaway">[Когда специалисту нужно обратиться к первоисточнику?]</p>
+          <div class="slide-foot"><span class="pfp-label">Два проверенных примера</span><span class="pfp-label">03 / 04</span></div>
+        </article>
+        <article class="slide" data-slide="3" aria-label="Демо прототипа" hidden>
+          <div class="slide-top"><span class="pfp-label">Хакатон ПФП</span><span class="pfp-label">Демо MVP · 20%</span></div>
+          <h2 class="slide-title">Как специалист проверяет запись</h2>
+          <div class="steps">
+            <div class="pfp-card"><span class="step-index">1</span><h3>Загрузить</h3><p>Выбрать документ для обработки</p></div>
+            <div class="pfp-card"><span class="step-index">2</span><h3>Найти</h3><p>Открыть извлечённое наблюдение</p></div>
+            <div class="pfp-card"><span class="step-index">3</span><h3>Сверить</h3><p>Перейти к исходному фрагменту</p></div>
+          </div>
+          <p class="takeaway">[Покажите этот сценарий в работающем продукте.]</p>
+          <div class="slide-foot"><span class="pfp-label">Основной пользовательский сценарий</span><span class="pfp-label">04 / 04</span></div>
+        </article>
+        <section class="dashboard" id="dashboard" aria-label="Макет дашборда" hidden>
+          <header class="dash-head">
+            <div><span class="pfp-label">Хакатон ПФП</span><h2>Критерии оценки</h2></div>
+            <label><span class="pfp-label">Вес критерия</span><select class="pfp-control" id="weight-filter"><option value="0">Все критерии</option><option value="20">От 20%</option></select></label>
+          </header>
+          <div class="kpis">
+            <div class="pfp-card highlight"><span class="pfp-label">Максимум</span><strong class="pfp-number">100</strong>баллов</div>
+            <div class="pfp-card"><span class="pfp-label">В рубрике</span><strong class="pfp-number">5</strong>критериев</div>
+            <div class="pfp-card"><span class="pfp-label">Наивысший вес</span><strong class="pfp-number">35%</strong>качество решения</div>
+          </div>
+          <div class="dash-grid">
+            <section class="pfp-card"><h3>Вес критериев</h3><ul class="pfp-bars" id="weight-bars"></ul></section>
+            <section class="pfp-card"><h3>Что показать жюри</h3><table class="pfp-table"><thead><tr><th scope="col">Критерий</th><th scope="col">Доказательство</th></tr></thead><tbody id="criteria-rows"></tbody></table></section>
+          </div>
+          <p class="dash-note">Веса из рубрики ПФП. Фильтр меняет график и таблицу.</p>
+        </section>
+      </div>
+      <div class="slide-controls" id="slide-controls">
+        <div class="slide-jump" role="group" aria-label="Перейти к слайду">
+          <button type="button" data-jump="0" aria-current="step">Обложка</button>
+          <button type="button" data-jump="1">Результат</button>
+          <button type="button" data-jump="2">Проверка</button>
+          <button type="button" data-jump="3">Демо MVP</button>
+        </div>
+        <div class="arrow-group"><button class="arrow" type="button" id="previous" aria-label="Предыдущий слайд" disabled>←</button><button class="arrow" type="button" id="next" aria-label="Следующий слайд">→</button></div>
+      </div>
+    </section>
+    <aside class="sidebar">
+      <h2>Выберите стиль</h2>
+      <div class="choices" role="group" aria-label="Стиль слайдов и дашборда">
+        <button class="theme-choice" type="button" data-choice="forest" aria-pressed="true"><span class="mini" style="--mini-bg:#101E19;--mini-accent:#BCED91" aria-hidden="true"></span><span><strong>Тайга</strong><small>Хвойный тёмный · мягкая мята</small></span></button>
+        <button class="theme-choice" type="button" data-choice="paper" aria-pressed="false"><span class="mini" style="--mini-bg:#E8EDDC;--mini-accent:#2D6147" aria-hidden="true"></span><span><strong>Гербарий</strong><small>Тёплая бумага · шалфей</small></span></button>
+        <button class="theme-choice" type="button" data-choice="signal" aria-pressed="false"><span class="mini" style="--mini-bg:#151714;--mini-accent:#D4FA44" aria-hidden="true"></span><span><strong>Полевой сигнал</strong><small>Графит · яркий лайм</small></span></button>
+      </div>
+      <p class="sidebar-note" id="theme-note" aria-live="polite">Мягкие углы, светлый текст и линии рельефа. Для защиты с живым демо и тёмного интерфейса.</p>
+    </aside>
+  </div>
+  <section class="kit" id="components">
+    <h2>Общие элементы</h2>
+    <div class="pfp-theme kit-demo" id="kit-demo" data-theme="forest">
+      <section class="pfp-card"><h3>Палитра</h3><div class="swatches" id="swatches"></div></section>
+      <section class="pfp-card"><h3>Типографика</h3><p class="type-test">Природа в данных</p><p class="type-info" id="type-info"></p></section>
+      <section class="pfp-card"><h3>Статусы</h3><div class="status-samples"><span class="pfp-status">Совпало</span><span class="pfp-status" data-status="review">На проверку</span><span class="pfp-status" data-status="neutral">Нет данных</span></div></section>
+    </div>
+    <details class="prompt" id="prompt-details">
+      <summary>Промпт для нейросети</summary>
+      <textarea id="prompt" readonly aria-label="Промпт для нейросети"></textarea>
+      <button class="plain-button" id="copy-prompt" type="button">Скопировать промпт</button>
+      <span id="copy-status" role="status"></span>
+    </details>
+  </section>
+  <footer>Сценарий «Летописи природы» показывает расстановку элементов. Веса критериев взяты из рубрики ПФП. <a class="link" href="theme.css" download>Скачать CSS компонентов</a></footer>
+</main>
+<script>
+  const themes = {
+    forest: { title: 'Тайга', fonts: 'Aptos Display / Aptos / Cascadia Mono', note: 'Мягкие углы, светлый текст и линии рельефа. Для защиты с живым демо и тёмного интерфейса.' },
+    paper: { title: 'Гербарий', fonts: 'Georgia / Aptos / Cascadia Mono', note: 'Бумажная основа, заголовки с засечками и тонкие линии. Для презентации исследования и дашборда с длинными таблицами.' },
+    signal: { title: 'Полевой сигнал', fonts: 'Arial Black / Aptos / Cascadia Mono', note: 'Прямые углы и чёткие лаймовые акценты. Для короткого питча и дашборда, где важно быстро считать главные показатели.' }
+  };
+  const criteria = [
+    ['Качество решения', 35, 'Результат на исходных данных'],
+    ['Проверка и ограничения', 20, 'Удачный случай и реальная ошибка'],
+    ['Работоспособность MVP', 20, 'Живой проход по сценарию'],
+    ['Практическая полезность', 15, 'Действие специалиста и его польза'],
+    ['Техническая обоснованность', 10, 'Метод и компромиссы']
+  ];
+  const stage = document.getElementById('stage');
+  const viewer = document.getElementById('viewer');
+  const kit = document.getElementById('kit-demo');
+  const slides = [...document.querySelectorAll('[data-slide]')];
+  const jumpButtons = [...document.querySelectorAll('[data-jump]')];
+  const themesButtons = [...document.querySelectorAll('[data-choice]')];
+  const viewButtons = [...document.querySelectorAll('[data-view]')];
+  const dashboard = document.getElementById('dashboard');
+  const controls = document.getElementById('slide-controls');
+  const previous = document.getElementById('previous');
+  const next = document.getElementById('next');
+  const full = document.getElementById('fullscreen');
+  const filter = document.getElementById('weight-filter');
+  const prompt = document.getElementById('prompt');
+  const swatches = document.getElementById('swatches');
+  let currentSlide = 0;
+  let currentView = 'slides';
+
+  function showSlide(index) {
+    currentSlide = Math.min(Math.max(index, 0), slides.length - 1);
+    slides.forEach((slide, position) => { slide.hidden = currentView !== 'slides' || position !== currentSlide; });
+    jumpButtons.forEach((button, position) => {
+      if (position === currentSlide) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
+    previous.disabled = currentSlide === 0;
+    next.disabled = currentSlide === slides.length - 1;
+  }
+
+  function showView(view) {
+    currentView = view;
+    viewButtons.forEach(button => button.setAttribute('aria-pressed', button.dataset.view === view));
+    dashboard.hidden = view !== 'dashboard';
+    controls.hidden = view !== 'slides';
+    full.hidden = view !== 'slides' || !document.fullscreenEnabled;
+    showSlide(currentSlide);
+  }
+
+  function showTheme(theme) {
+    const design = themes[theme];
+    stage.dataset.theme = theme;
+    kit.dataset.theme = theme;
+    themesButtons.forEach(button => button.setAttribute('aria-pressed', button.dataset.choice === theme));
+    document.getElementById('theme-note').textContent = design.note;
+    document.getElementById('type-info').textContent = design.fonts;
+    const style = getComputedStyle(kit);
+    const colors = [['bg', 'Фон'], ['surface', 'Карточка'], ['ink', 'Текст'], ['accent', 'Акцент']];
+    swatches.replaceChildren(...colors.map(([variable, name]) => {
+      const item = document.createElement('div');
+      const color = style.getPropertyValue('--' + variable).trim();
+      item.className = 'swatch';
+      item.innerHTML = `<i style="background:${color}" aria-hidden="true"></i>${color}<span>${name}</span>`;
+      return item;
+    }));
+    const palette = colors.map(([variable, name]) => `${name} ${style.getPropertyValue('--' + variable).trim()}`).join(', ');
+    prompt.value = `Возьми приложенные index.html и theme.css за референс. Собери HTML-презентацию на русском и дашборд в стиле «${design.title}» (data-theme="${theme}"). ${design.note}
+
+Общая палитра: ${palette}. Шрифты: ${design.fonts}. Используй переменные и компоненты .pfp-* из theme.css. Сделай заголовки умеренного размера и обычного начертания. Оставь пространство вокруг заголовка и по одному визуальному акценту на слайд. Сделай формат 16:9 и навигацию стрелками. В дашборде переиспользуй карточки, статусы, фильтр, график и таблицу. Указывай единицы и подписи и передавай статусы также текстом. На узком экране перестраивай панели в одну колонку.
+
+Данные проекта я передам отдельным сообщением. Собери обложку, результат на реальных данных, проверку с удачным и ошибочным примерами, путь в работающем MVP, практическую пользу и технический подход. Используй явные заполнители для недостающих материалов. Для демонстрации фильтра и таблицы можно использовать веса из рубрики ПФП: качество решения 35%, проверка 20%, MVP 20%, польза 15%, технический подход 10%.`;
+    document.getElementById('copy-status').textContent = '';
+  }
+
+  function showCriteria() {
+    const visible = criteria.filter(([, weight]) => weight >= Number(filter.value));
+    document.getElementById('weight-bars').innerHTML = visible.map(([label, weight]) => `
+      <li><div class="pfp-bar-label"><span>${label}</span><strong>${weight}%</strong></div><div class="pfp-bar-track" aria-hidden="true"><span style="--value:${weight}%"></span></div></li>`).join('');
+    document.getElementById('criteria-rows').innerHTML = visible.map(([label, , proof]) => `<tr><td>${label}</td><td>${proof}</td></tr>`).join('');
+  }
+
+  themesButtons.forEach(button => button.addEventListener('click', () => showTheme(button.dataset.choice)));
+  viewButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+  jumpButtons.forEach(button => button.addEventListener('click', () => showSlide(Number(button.dataset.jump))));
+  previous.addEventListener('click', () => showSlide(currentSlide - 1));
+  next.addEventListener('click', () => showSlide(currentSlide + 1));
+  full.addEventListener('click', async () => {
+    try { await viewer.requestFullscreen(); }
+    catch { full.textContent = 'Полноэкранный режим недоступен'; }
+  });
+  document.addEventListener('keydown', event => {
+    if (currentView !== 'slides' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('input, textarea, select')) return;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      showSlide(currentSlide + (event.key === 'ArrowRight' ? 1 : -1));
+    }
+  });
+  filter.addEventListener('change', showCriteria);
+  document.getElementById('copy-prompt').addEventListener('click', async () => {
+    const status = document.getElementById('copy-status');
+    try {
+      await navigator.clipboard.writeText(prompt.value);
+      status.textContent = 'Скопировано';
+    } catch {
+      prompt.select();
+      status.textContent = 'Текст выделен. Нажмите Ctrl+C или ⌘C.';
+    }
+  });
+  showView('slides');
+  showTheme('forest');
+  showCriteria();
+</script>
+</html>

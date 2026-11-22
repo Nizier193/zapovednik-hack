@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тайга · Графические элементы</title>
+  <style>
+    :root { color-scheme: dark; --bg: #101e19; --panel: #192d25; --ink: #f1f6e8; --muted: #acc0b0; --accent: #bced91; --line: #3e5549; font: 16px/1.45 Aptos, 'Segoe UI', sans-serif; background: var(--bg); color: var(--ink); }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; }
+    main { max-width: 880px; width: calc(100% - 40px); margin: 48px auto; }
+    h1, h2, p { margin: 0; }
+    h1 { font: 500 clamp(2.15rem, 6vw, 3.5rem)/1.04 'Aptos Display', Aptos, sans-serif; letter-spacing: -.055em; margin: .3rem 0 .65rem; }
+    p, .meta { color: var(--muted); }
+    .meta { font: 500 .76rem/1.4 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .085em; }
+    button, select { font: inherit; }
+    a, button, select { border-radius: 8px; }
+    a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 24px 0 42px; }
+    .asset { display: grid; justify-items: center; gap: 5px; padding: 10px 9px 13px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); text-align: center; }
+    .asset img { width: clamp(68px, 20vw, 133px); height: auto; display: block; }
+    .asset span { line-height: 1.2; }
+    .asset a { color: var(--muted); font-size: .76rem; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .demo-title { font: 500 clamp(1.45rem, 3vw, 2.25rem)/1.1 'Aptos Display', Aptos, sans-serif; letter-spacing: -.035em; }
+    .stage { container-type: inline-size; position: relative; isolation: isolate; aspect-ratio: 16 / 9; margin-top: 14px; overflow: hidden; perspective: 850px; background: #0e1915; border-radius: 15px; border: 1px solid var(--line); }
+    .slide {
+      display: grid; position: absolute; inset: 0; align-content: center; gap: 1.6cqw; padding: 8cqw; transform-origin: 0 50%;
+      background: linear-gradient(90deg, transparent 47%, var(--taiga-edge, transparent)),
+        url('forest-shadow.png') center / cover no-repeat,
+        radial-gradient(ellipse at 80% 63%, #355241 0%, #293f32 28%, #1a2b23 51%, #101e19 75%);
+    }
+    .slide.incoming { z-index: -1; }
+    .slide:nth-child(2) { --taiga-edge: #101e1960; }
+    .slide h3 { max-width: 55cqw; font: 500 8cqw/.98 'Aptos Display', Aptos, sans-serif; text-wrap: balance; letter-spacing: -.055em; margin: 0; }
+    .slide .meta { font-size: 1.65cqw; }
+    .slide p { font-size: 2.25cqw; }
+    .blade { display: block; position: absolute; left: -20%; top: 75%; width: 30%; height: auto; z-index: 2; pointer-events: none; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 12px; }
+    select, button { padding: .5rem .75rem; }
+    select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+    button { border: 1px solid transparent; background: var(--accent); color: #152516; cursor: pointer; font-weight: 650; }
+    button[aria-disabled='true'] { cursor: wait; opacity: .75; }
+    .step { margin-left: auto; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+    .background-link { margin-top: 14px; font-size: .88rem; }
+    .background-link a { color: var(--accent); text-underline-offset: 3px; }
+    @media (max-width: 470px) {
+      main { width: calc(100% - 24px); margin-block: 30px; }
+      .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .controls { font-size: .88rem; }
+      .stage { border-radius: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="meta">Заповедный хакатон</p>
+      <h1>Элементы «Тайги»</h1>
+      <p>Прозрачные PNG для слайдов и дашбордов.</p>
+    </header>
+    <section class="gallery" aria-label="Графические элементы">
+      <div class="asset"><img src="leaf-mint.png" alt="" width="720" height="720"><span>Мятный лист</span><a href="leaf-mint.png" download aria-label="Скачать мятный лист">PNG ↓</a></div>
+      <div class="asset"><img src="leaf-sage.png" alt="" width="720" height="720"><span>Узкий лист</span><a href="leaf-sage.png" download aria-label="Скачать узкий лист">PNG ↓</a></div>
+      <div class="asset"><img src="leaf-outline.png" alt="" width="720" height="720"><span>Контурный лист</span><a href="leaf-outline.png" download aria-label="Скачать контурный лист">PNG ↓</a></div>
+      <div class="asset"><img src="spruce-tip.png" alt="" width="720" height="720"><span>Хвойная ветка</span><a href="spruce-tip.png" download aria-label="Скачать хвойную ветку">PNG ↓</a></div>
+      <div class="asset"><img src="contour-lines.png" alt="" width="720" height="720"><span>Линии рельефа</span><a href="contour-lines.png" download aria-label="Скачать линии рельефа">PNG ↓</a></div>
+      <div class="asset"><img src="map-pin.png" alt="" width="720" height="720"><span>Метка карты</span><a href="map-pin.png" download aria-label="Скачать метку карты">PNG ↓</a></div>
+    </section>
+    <section aria-labelledby="demo-title">
+      <h2 class="demo-title" id="demo-title">Лист перелистывает слайд</h2>
+      <div class="stage">
+        <article class="slide"><p class="meta">Хакатон ПФП</p><h3>Природа<br>в данных</h3><p>Летописи природы</p></article>
+        <article class="slide" hidden><p class="meta">Результат</p><h3>От фрагмента<br>к записи</h3><p>Дата · Вид · Место</p></article>
+        <img class="blade" id="blade" src="leaf-mint.png" alt="" width="720" height="720" hidden>
+      </div>
+      <div class="controls">
+        <select id="leaf-variant" aria-label="Вариант листика">
+          <option value="leaf-mint.png">Мятный лист</option>
+          <option value="leaf-sage.png">Узкий лист</option>
+          <option value="leaf-outline.png">Контурный лист</option>
+        </select>
+        <button type="button" id="turn">Листнуть →</button>
+        <span class="step" id="step" role="status">Слайд 1 из 2</span>
+      </div>
+      <p class="background-link"><a href="forest-shadow.png" download>Фон с елями · PNG 1920 × 1080 ↓</a></p>
+      <p class="background-link">Форма лесного края взята с фотографий <a href="https://unsplash.com/fr/photos/montagne-pendant-la-photo-de-laube-qoSRVT7upno">Leo_Visions</a> и <a href="https://unsplash.com/photos/a-row-of-trees-in-front-of-a-cloudy-sky-sML3H1B2xh0">Wolfgang Hasselmann</a>. <a href="https://unsplash.com/license">Лицензия Unsplash</a></p>
+    </section>
+  </main>
+  <script>
+    const blade = document.getElementById('blade');
+    const variant = document.getElementById('leaf-variant');
+    const turn = document.getElementById('turn');
+    const step = document.getElementById('step');
+    const slides = [...document.querySelectorAll('.slide')];
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    let active = 0;
+    let running = false;
+
+    variant.addEventListener('change', () => { blade.src = variant.value; });
+    turn.addEventListener('click', async () => {
+      if (running) return;
+      running = true;
+      turn.setAttribute('aria-disabled', 'true');
+      const previous = slides[active];
+      const nextIndex = (active + 1) % slides.length;
+      const next = slides[nextIndex];
+      next.classList.add('incoming');
+      next.setAttribute('aria-hidden', 'true');
+      next.hidden = false;
+      try {
+        if (!reducedMotion.matches && typeof blade.animate === 'function') {
+          blade.hidden = false;
+          const flight = blade.animate([
+            { left: '-18%', top: '75%', transform: 'translate(-50%, -50%) rotate(-34deg) rotateY(5deg) scale(.66)', offset: 0 },
+            { left: '31%', top: '49%', transform: 'translate(-50%, -50%) rotate(17deg) rotateY(125deg) scale(.94)', offset: .37 },
+            { left: '63%', top: '27%', transform: 'translate(-50%, -50%) rotate(-8deg) rotateY(246deg)', offset: .64 },
+            { left: '119%', top: '48%', transform: 'translate(-50%, -50%) rotate(29deg) rotateY(360deg) scale(.6)', offset: 1 }
+          ], { duration: 950, easing: 'cubic-bezier(.24,.55,.61,.96)', fill: 'both' });
+          const page = previous.animate([
+            { transform: 'rotateY(0deg)', opacity: 1 },
+            { transform: 'translateX(-5%) rotateY(-68deg)', opacity: .35, offset: .72 },
+            { transform: 'translateX(-14%) rotateY(-90deg)', opacity: 0 }
+          ], { delay: 285, duration: 520, easing: 'cubic-bezier(.33,.06,.27,.99)', fill: 'both' });
+          const entry = next.animate([
+            { transform: 'translateX(2%)', opacity: .42 },
+            { transform: 'translateX(0)', opacity: 1 }
+          ], { delay: 285, duration: 525, easing: 'ease-out', fill: 'both' });
+          await Promise.allSettled([flight.finished, page.finished, entry.finished]);
+          previous.hidden = true;
+          blade.hidden = true;
+          for (const animation of [flight, page, entry]) animation.cancel();
+        }
+      } finally {
+        active = nextIndex;
+        previous.hidden = true;
+        blade.hidden = true;
+        next.classList.remove('incoming');
+        next.removeAttribute('aria-hidden');
+        step.textContent = `Слайд ${active + 1} из ${slides.length}`;
+        turn.removeAttribute('aria-disabled');
+        running = false;
+      }
+    });
+  </script>
+</body>
+</html>

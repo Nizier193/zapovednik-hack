@@ -1,0 +1,121 @@
+/* Цвета, типографика и компоненты для слайдов и дашбордов.
+   Установите data-theme="forest", "paper" или "signal" на контейнере. */
+.pfp-theme {
+  --font: 'Aptos', 'Segoe UI', sans-serif;
+  --display: 'Aptos Display', 'Segoe UI', sans-serif;
+  --mono: 'Cascadia Mono', 'Consolas', monospace;
+  --radius: 16px;
+  --space: 8px;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  color-scheme: var(--scheme);
+}
+.pfp-theme[data-theme="forest"] {
+  --scheme: dark;
+  --bg: #101E19;
+  --surface: #192D25;
+  --ink: #F1F6E8;
+  --muted: #ACC0B0;
+  --accent: #BCED91;
+  --accent-ink: #152516;
+  --line: #3E5549;
+  --warn: #FFD18D;
+}
+.pfp-theme[data-theme="paper"] {
+  --scheme: light;
+  --bg: #F4F3E7;
+  --surface: #E8EDDC;
+  --ink: #203B2D;
+  --muted: #4F6457;
+  --accent: #2D6147;
+  --accent-ink: #F6F9EE;
+  --line: #BAC7B5;
+  --warn: #80501F;
+  --display: Georgia, 'Times New Roman', serif;
+  --radius: 5px;
+}
+.pfp-theme[data-theme="signal"] {
+  --scheme: dark;
+  --bg: #151714;
+  --surface: #232720;
+  --ink: #F5F7EF;
+  --muted: #BBC6B5;
+  --accent: #D4FA44;
+  --accent-ink: #151714;
+  --line: #4D5948;
+  --warn: #FFCD70;
+  --display: 'Arial Black', 'Segoe UI', sans-serif;
+  --radius: 4px;
+}
+.pfp-card {
+  min-width: 0;
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.pfp-label {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.pfp-number {
+  display: block;
+  font-size: 2.5em;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.055em;
+  font-variant-numeric: tabular-nums;
+}
+.pfp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .55em;
+  padding: .3em .7em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: .85em;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.pfp-status::before {
+  content: '';
+  flex: 0 0 .48em;
+  height: .48em;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pfp-status[data-status="review"] { color: var(--warn); }
+.pfp-status[data-status="neutral"] { color: var(--muted); }
+.pfp-control {
+  padding: .55em .85em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.pfp-control:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pfp-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.pfp-table th, .pfp-table td {
+  padding: .62em .45em;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.pfp-table th { color: var(--muted); font-size: .8em; }
+.pfp-table tr:last-child td { border-bottom: 0; }
+.pfp-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.pfp-bars { display: grid; gap: .68em; padding: 0; margin: 0; list-style: none; }
+.pfp-bar-label { display: flex; justify-content: space-between; gap: .5em; font-size: .93em; }
+.pfp-bar-track { height: .48em; margin-top: .28em; border-radius: 999px; background: var(--line); }
+.pfp-bar-track span { display: block; width: var(--value, 0%); height: 100%; border-radius: inherit; background: var(--accent); }
