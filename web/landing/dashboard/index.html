@@ -41,7 +41,18 @@
       <button type="button" data-preset="pair">Поляна и поле, 2025</button>
       <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
     </div>
-    <button type="button" class="excel" id="excel">Выгрузка в Excel</button>
+    <p class="side-label">Шаблоны анализа</p>
+    <div class="presets" id="templates">
+      <button type="button" data-template="pair">Поляна и поле — температура</button>
+      <button type="button" data-template="soil">Воздух и почва по глубинам</button>
+      <button type="button" data-template="temprh">Температура и влажность</button>
+      <button type="button" data-template="pressure">Давление и качество</button>
+      <button type="button" data-template="wind">Ветровой режим</button>
+    </div>
+    <p class="side-label">Линия на графике</p>
+    <label class="field">Значение <input type="number" id="line-value" step="any" placeholder="0"></label>
+    <label class="field">Подпись <input type="text" id="line-label" placeholder="0 °C"></label>
+    <button type="button" class="excel" id="excel">Выгрузка в Excel (.xlsx)</button>
     <button type="button" class="excel" id="exceptions">Журнал исключений</button>
     <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg> Разбор</p>
     <fieldset class="checks">
@@ -103,11 +114,11 @@
       <h2 id="exceptions-title">Журнал исключений</h2>
       <button type="button" id="exceptions-close">Закрыть</button>
     </header>
-    <p class="legend">Строка выпадает из расчёта по флагу файла. Ниже счётчик и примеры сроков, не весь архив построчно.</p>
+    <p class="legend">Полный журнал: каждое значение или строка, выпавшие из расчёта, с файлом и номером строки. Фильтр по причине сверху.</p>
     <div class="journal-summary" id="exceptions-summary"></div>
     <div class="journal-scroll">
       <table>
-        <thead><tr><th>Станция</th><th>Срок</th><th>Что</th><th>Значение</th><th>Почему исключено</th></tr></thead>
+        <thead><tr><th>Станция</th><th>Срок</th><th>Что</th><th>Значение</th><th>Почему исключено</th><th>Файл:строка</th></tr></thead>
         <tbody id="exceptions-rows"></tbody>
       </table>
     </div>
