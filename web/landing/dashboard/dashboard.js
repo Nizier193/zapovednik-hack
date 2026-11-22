@@ -2,10 +2,10 @@ let data = null;
 const get = id => document.getElementById(id);
 const dayMs = 86400000;
 const palette = {
-  ink: "#F1F6E8", muted: "#ACC0B0", line: "#3B5547",
-  accent: "#BCED91", warm: "#E4C98A", coral: "#E0A090", blue: "#8FB4A4",
-  soil5: "#E4C98A", soil10: "#BCED91", soil20: "#7EAA98",
-  speeds: ["#3E6B52", "#6E9A74", "#BCED91", "#E4C98A", "#E0A878"]
+  ink: "#E6EFEB", muted: "#A4B4AD", line: "#364842",
+  accent: "#89D8AE", warm: "#E6B86E", coral: "#F08E82", blue: "#88BDE9",
+  soil5: "#E6B86E", soil10: "#89D8AE", soil20: "#88BDE9",
+  speeds: ["#4B906C", "#71AF87", "#A3D1A2", "#E2C778", "#D99B79"]
 };
 const metrics = {
   t_air: ["Температура воздуха", "°C"], rh: ["Относительная влажность", "%"],
@@ -21,14 +21,33 @@ const stations = [
 ];
 const sectorNames = ["С", "ССВ", "СВ", "ВСВ", "В", "ВЮВ", "ЮВ", "ЮЮВ", "Ю", "ЮЮЗ", "ЮЗ", "ЗЮЗ", "З", "ЗСЗ", "СЗ", "ССЗ"];
 const speedBins = ["0 < v < 2", "2 ≤ v < 5", "5 ≤ v < 10", "10 ≤ v < 15", "v ≥ 15"];
-const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart", view: "series", step: "month", trendMonth: 1, lines: [], clipNote: "" };
-const format = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
-const formatFull = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6 });
+const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart", view: "series", step: "month", impute: false, trendMonth: 1, lines: [], clipNote: "", modules: [{ id: "mod-1", kind: "chart", layout: "overlay", picked: { t_air: ["mean"] } }] };
+const PARAMS = {
+  t_air: ["Температура воздуха", "°C", "#89D8AE"],
+  rh: ["Относительная влажность", "%", "#78CBD2"],
+  wind_speed: ["Скорость ветра", "м/с", "#91B9F0"],
+  wind_gust: ["Порывы ветра", "м/с", "#E5B674"],
+  wind_dir: ["Направление ветра", "°", "#BEA0E6"],
+  soil_05: ["Температура почвы, 5 см", "°C", "#C2CD81"],
+  soil_10: ["Температура почвы, 10 см", "°C", "#79C899"],
+  soil_20: ["Температура почвы, 20 см", "°C", "#D3B18A"],
+  pressure_hpa: ["Атмосферное давление", "гПа", "#E3A0BC"]
+};
+const LINE_STYLE = {
+  mean: { name: "Среднее", dash: [], width: 2.1, alpha: 1 },
+  median: { name: "Медиана", dash: [7, 4], width: 1.35, alpha: 0.96 },
+  min: { name: "Минимум", dash: [2, 5], width: 1.35, alpha: 0.65 },
+  max: { name: "Максимум", dash: [6, 3, 2, 3], width: 1.35, alpha: 0.8 },
+  trend: { name: "Тренд среднего", dash: [12, 6], width: 1.35, alpha: 0.76 }
+};
+const anomalyCache = {};
+const format = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const formatFull = format;
 const monthName = new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: "UTC" });
 const longDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const axisDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "UTC" });
 const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
-const on = id => get(id).checked;
+const on = id => { const node = get(id); return !!(node && node.checked); };
 const unit = () => metrics[state.metric][1];
 const text = value => value === null || value === undefined || !Number.isFinite(value) ? "нет" : `${formatFull.format(value)} ${unit()}`;
 let months = [];
@@ -45,6 +64,41 @@ function yearsWord(count) {
   return "лет";
 }
 
+function anomalySet(metric) {
+  const key = `${state.station}:${metric}`;
+  if (anomalyCache[key]) return anomalyCache[key];
+  const days = (stationData().series[metric] || {}).days || [];
+  const byMonth = {};
+  days.forEach((entry, index) => {
+    if (!entry.valid || entry.v == null) return;
+    const month = entry.d.slice(5, 7);
+    if (!byMonth[month]) byMonth[month] = [];
+    byMonth[month].push({ index, v: entry.v });
+  });
+  const bad = new Set();
+  Object.keys(byMonth).forEach(month => {
+    const values = byMonth[month].map(item => item.v).sort((a, b) => a - b);
+    if (values.length < 8) return;
+    const at = p => values[Math.min(values.length - 1, Math.round((values.length - 1) * p))];
+    const q1 = at(0.25);
+    const q3 = at(0.75);
+    const iqr = q3 - q1;
+    const low = q1 - 1.5 * iqr;
+    const high = q3 + 1.5 * iqr;
+    byMonth[month].forEach(item => {
+      if (item.v < low || item.v > high) bad.add(item.index);
+    });
+  });
+  anomalyCache[key] = bad;
+  return bad;
+}
+
+function cleanNumber(entry, index, metric, field) {
+  if (!entry || !entry.valid || entry.v == null) return null;
+  if (anomalySet(metric).has(index)) return null;
+  const value = entry[field];
+  return value == null ? null : value;
+}
 function stationData() { return data.stations[state.station]; }
 function seriesData() { return stationData().series[state.metric]; }
 function utcDay(dateStr) {
@@ -83,7 +137,8 @@ function buildMonths() {
     const y = +first.slice(0, 4), m = +first.slice(5, 7);
     const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const partial = +first.slice(8, 10) !== 1 || items.length !== daysInMonth;
-    const good = items.filter(item => item.v !== null);
+    const bad = anomalySet(state.metric);
+    const good = items.filter(item => item.v !== null && !bad.has(dayIndex(item.d)));
     let streak = 0, longest = 0;
     items.forEach(item => { streak = item.v === null ? streak + 1 : 0; longest = Math.max(longest, streak); });
     const usable = !partial && good.length > 0 && daysInMonth - good.length <= 10 && longest < 5;
@@ -128,6 +183,129 @@ function monthTrend(items, month) {
   return { slope, years, n: selected.length, meanX, meanY };
 }
 
+// Fit the complete daily archive before selecting a visible period. Neither
+// measurements nor anomalies are replaced, and predictions never train the fit.
+function reconstructDaily(days, excludedIndices, metric) {
+  const excluded = excludedIndices || new Set();
+  const measured = days.map((entry, index) => entry && entry.valid && Number.isFinite(entry.v) && !excluded.has(index) ? entry.v : null);
+  const values = measured.slice();
+  const mask = days.map(() => false);
+  if (metric === "wind_dir") return { values, mask };
+  const bins = new Map();
+  days.forEach((entry, index) => {
+    if (!Number.isFinite(measured[index])) return;
+    const key = entry.d.slice(5, 7);
+    if (!bins.has(key)) bins.set(key, []);
+    bins.get(key).push(measured[index]);
+  });
+  const climate = new Map([...bins].map(([key, samples]) => [key, average(samples)]));
+  const stamp = index => Date.parse(`${days[index].d}T00:00:00Z`);
+  let start = 0;
+  while (start < days.length) {
+    if (excluded.has(start) || Number.isFinite(measured[start])) { start += 1; continue; }
+    let end = start;
+    while (end < days.length && !excluded.has(end) && !Number.isFinite(measured[end])) end += 1;
+    const left = start - 1, right = end;
+    const length = Math.round((stamp(end - 1) - stamp(start)) / dayMs) + 1;
+    const bridge = length > 0 && length <= 14 && left >= 0 && right < days.length && Number.isFinite(measured[left]) && Number.isFinite(measured[right]);
+    for (let index = start; index < end; index += 1) {
+      const base = climate.get(days[index].d.slice(5, 7));
+      let value = Number.isFinite(base) ? base : null;
+      if (bridge) {
+        const blend = (stamp(index) - stamp(left)) / (stamp(right) - stamp(left));
+        const linear = measured[left] + (measured[right] - measured[left]) * blend;
+        value = Number.isFinite(base) ? (base + linear) / 2 : linear;
+      }
+      if (Number.isFinite(value)) { values[index] = value; mask[index] = true; }
+    }
+    start = end;
+  }
+  return { values, mask };
+}
+
+const reconstructionCache = new WeakMap();
+function reconstructionFor(metric) {
+  const days = (stationData().series[metric] || {}).days || [];
+  const excluded = anomalySet(metric);
+  let cached = reconstructionCache.get(days);
+  if (!cached) { cached = new Map(); reconstructionCache.set(days, cached); }
+  const previous = cached.get(metric);
+  if (previous && previous.excluded === excluded) return previous.result;
+  const filled = reconstructDaily(days, excluded, metric);
+  const result = Object.freeze({ values: Object.freeze(filled.values), mask: Object.freeze(filled.mask) });
+  cached.set(metric, { excluded, result });
+  return result;
+}
+
+function imputeValues(items) {
+  if (state.step !== "day" || state.metric === "wind_dir") return { values: items.map(item => item.value), mask: items.map(() => false) };
+  const filled = reconstructionFor(state.metric);
+  const indices = items.map((item, index) => Number.isInteger(item.start) ? item.start : state.from + index);
+  return { values: indices.map(index => filled.values[index] ?? null), mask: indices.map(index => !!filled.mask[index]) };
+}
+
+// Only intervals touching a predicted point get the golden stroke. This also
+// draws a one-day gap between its measured anchors without recoloring the rest.
+function paintReconstruction(ctx, x, y, filled) {
+  if (!filled) return;
+  const { values, mask } = filled;
+  ctx.save();
+  ctx.strokeStyle = "#E7C98A";
+  ctx.fillStyle = "#E7C98A";
+  ctx.globalAlpha = 0.6;
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  let open = false;
+  for (let index = 1; index < values.length; index += 1) {
+    if (!(mask[index - 1] || mask[index]) || !Number.isFinite(values[index - 1]) || !Number.isFinite(values[index])) { open = false; continue; }
+    if (!open) ctx.moveTo(x(index - 1), y(values[index - 1]));
+    ctx.lineTo(x(index), y(values[index]));
+    open = true;
+  }
+  ctx.stroke();
+  mask.forEach((predicted, index) => {
+    if (!predicted || !Number.isFinite(values[index])) return;
+    if (Number.isFinite(values[index - 1]) || Number.isFinite(values[index + 1])) return;
+    ctx.beginPath();
+    ctx.arc(x(index), y(values[index]), 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function paintGuides(ctx, x, y, items) {
+  if (!items.length) return;
+  if (on("opt-median")) {
+    const nums = items.map(item => item.value).filter(value => Number.isFinite(value)).sort((a, b) => a - b);
+    if (nums.length) {
+      const mid = nums.length % 2 ? nums[(nums.length - 1) / 2] : (nums[nums.length / 2 - 1] + nums[nums.length / 2]) / 2;
+      ctx.save();
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = palette.ink;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x(0), y(mid));
+      ctx.lineTo(x(Math.max(0, items.length - 1)), y(mid));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (state.impute && state.step === "day" && state.metric !== "wind_dir") {
+    const filled = imputeValues(items);
+    ctx.strokeStyle = palette.warm;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let open = false;
+    filled.mask.forEach((flag, point) => {
+      if (!flag || !Number.isFinite(filled.values[point])) { open = false; return; }
+      if (!open) { ctx.moveTo(x(point), y(filled.values[point])); open = true; }
+      else ctx.lineTo(x(point), y(filled.values[point]));
+    });
+    ctx.stroke();
+  }
+}
+
 function movingAverage(items) {
   const result = items.map(() => null);
   for (let index = 0; index < items.length; index += 1) {
@@ -138,9 +316,13 @@ function movingAverage(items) {
   return result;
 }
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
+}
+
 function renderStations() {
   get("stations").innerHTML = stations.map(([id, name, note]) =>
-    `<button type="button" role="radio" data-station="${id}" aria-pressed="${id === state.station}"><strong>${name}</strong><span>${note}</span></button>`
+    `<button type="button" role="radio" data-station="${id}" aria-checked="${id === state.station}" tabindex="${id === state.station ? 0 : -1}"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(note)}</span></button>`
   ).join("");
 }
 
@@ -204,12 +386,12 @@ function syncMenus() {
 }
 
 function setStation(id, options = {}) {
+  Object.keys(anomalyCache).forEach(key => delete anomalyCache[key]);
   const previous = options.keep ? { start: iso(state.from), end: iso(state.to) } : null;
   state.station = id;
   const keys = (stationData().parameters || []).filter(key => metrics[key]);
   if (options.metric && keys.includes(options.metric)) state.metric = options.metric;
   else if (options.metric && !keys.includes(options.metric)) {
-    state.clipNote = "Показатель из адреса на этой станции не измеряется.";
     if (!keys.includes(state.metric)) state.metric = keys.includes("t_air") ? "t_air" : keys[0];
   } else if (!keys.includes(state.metric)) state.metric = keys.includes("t_air") ? "t_air" : keys[0];
   const select = get("metric");
@@ -227,14 +409,11 @@ function setStation(id, options = {}) {
     let a = previous.start;
     let b = previous.end;
     if (b < arch.start || a > arch.end) {
-      state.clipNote = `Период ${previous.start} - ${previous.end} вне архива станции (${arch.start} - ${arch.end}). Показан весь архив.`;
       a = arch.start;
       b = arch.end;
     } else {
-      const notes = [];
-      if (a < arch.start) { notes.push(`Начало обрезано до ${arch.start}: раньше архива этой станции суток нет.`); a = arch.start; }
-      if (b > arch.end) { notes.push(`Конец обрезан до ${arch.end}: позже архива этой станции суток нет.`); b = arch.end; }
-      if (notes.length) state.clipNote = notes.join(" ");
+      if (a < arch.start) a = arch.start;
+      if (b > arch.end) b = arch.end;
     }
     state.from = clampIndex(dayIndex(a));
     state.to = clampIndex(dayIndex(b));
@@ -281,12 +460,15 @@ function clearDateErrors() {
   const end = get("date-end-error");
   if (start) start.textContent = "";
   if (end) end.textContent = "";
+  ["date-start", "date-end"].forEach(id => { const field = get(id); if (field) field.removeAttribute("aria-invalid"); });
 }
 
 function applyDatesFromFields() {
   const result = validateRange(get("date-start").value, get("date-end").value);
   get("date-start-error").textContent = result.errors.start;
   get("date-end-error").textContent = result.errors.end;
+  get("date-start").setAttribute("aria-invalid", String(!!result.errors.start));
+  get("date-end").setAttribute("aria-invalid", String(!!result.errors.end));
   if (!result.ok) return;
   editingDates = false;
   state.clipNote = "";
@@ -396,7 +578,11 @@ function hidePlotEmpty(id) {
 }
 
 function renderStats() {
-  const values = shown.filter(item => item.value !== null);
+  const values = shown.filter(item => {
+    if (item.value === null) return false;
+    if (state.view === "series" && state.step === "day" && anomalySet(state.metric).has(item.start)) return false;
+    return true;
+  });
   const years = new Set(values.map(item => item.year));
   const mean = values.length && state.metric !== "wind_dir" ? average(values.map(item => item.value)) : null;
   const low = values.length && state.metric !== "wind_dir" ? Math.min(...values.map(item => item.value)) : null;
@@ -413,26 +599,30 @@ function renderStats() {
     `<article class="stat">${statIcon(kind)}<div><p>${label}</p><strong>${value}</strong></div></article>`
   ).join("");
   const april = state.station === "kr1" && state.metric === "pressure_hpa" && monthShown.some(item => item.key === "2024-04" && item.value === null);
-  get("side-note").textContent = april
+  const note = get("side-note");
+  if (note) note.textContent = april
     ? "Апрель 2024 у Кр1 не входит в месячное давление: 2/30 пригодных суток, 28 неполных подряд."
-    : "Отклонение от среднего того же месяца по всем годам станции. Не норма ВМО. Ряды не соединяются.";
+    : "";
 }
 
 function context(canvas) {
-  const box = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.round(box.width * ratio));
-  canvas.height = Math.max(1, Math.round(box.height * ratio));
+  const width = canvas.clientWidth || 1;
+  const height = canvas.clientHeight || 1;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(width * ratio));
+  canvas.height = Math.max(1, Math.round(height * ratio));
   const ctx = canvas.getContext("2d");
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return { ctx, width: box.width, height: box.height };
+  return { ctx, width, height };
 }
 
 function scale(items, extra) {
   const values = items.flatMap(extra).filter(value => Number.isFinite(value));
   if (!values.length) return { low: 0, high: 1 };
-  let low = Math.min(...values);
-  let high = Math.max(...values);
+  // Avoid spreading full archives into Math.min/max: several parameters with
+  // min/max/trend can exceed the JavaScript argument limit.
+  let low = Infinity, high = -Infinity;
+  values.forEach(value => { low = Math.min(low, value); high = Math.max(high, value); });
   if (low === high) { low -= 1; high += 1; }
   const pad = (high - low) * 0.08;
   return { low: low - pad, high: high + pad };
@@ -442,14 +632,14 @@ function drawSeries(canvas, items, options) {
   const { ctx, width, height } = context(canvas);
   const pad = { left: 48, right: 12, top: 16, bottom: 28 };
   const plotWidth = Math.max(1, width - pad.left - pad.right);
-  const plotHeight = height - pad.top - pad.bottom;
+  const plotHeight = Math.max(1, height - pad.top - pad.bottom);
   const { low, high } = options.scale;
   const gridLow = options.gridLow ?? low;
   const gridHigh = options.gridHigh ?? high;
   const x = index => pad.left + (items.length <= 1 ? plotWidth / 2 : index / (items.length - 1) * plotWidth);
   const y = value => pad.top + (1 - (value - low) / (high - low)) * plotHeight;
   ctx.clearRect(0, 0, width, height);
-  ctx.font = "12px 'Roboto Mono', monospace";
+  ctx.font = "13px 'Roboto Mono', monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = palette.muted;
@@ -472,7 +662,7 @@ function drawSeries(canvas, items, options) {
     ctx.fillText(caption, x(index), height - 8);
   });
   if (options.zero && low < 0 && high > 0) {
-    ctx.strokeStyle = "rgba(241, 246, 232, 0.35)";
+    ctx.strokeStyle = palette.muted;
     ctx.beginPath();
     ctx.moveTo(pad.left, y(0));
     ctx.lineTo(width - pad.right, y(0));
@@ -481,6 +671,7 @@ function drawSeries(canvas, items, options) {
   // пользовательские горизонтальные линии
   state.lines.forEach(line => {
     if (line.value === null || line.value === undefined) return;
+    if (!Number.isFinite(Number(line.value)) || Number(line.value) < low || Number(line.value) > high) return;
     ctx.strokeStyle = line.color || palette.warm;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
@@ -492,7 +683,12 @@ function drawSeries(canvas, items, options) {
     ctx.textAlign = "right";
     ctx.fillText(line.label || "", pad.left - 8, y(Number(line.value)) - 4);
   });
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad.left, pad.top, plotWidth, plotHeight);
+  ctx.clip();
   options.draw(ctx, x, y, plotHeight, pad);
+  ctx.restore();
   canvas._rows = items;
   return { x, y, pad, width, height, plotHeight };
 }
@@ -635,23 +831,46 @@ function drawDekad() {
 }
 
 // ---- выгрузка Excel (настоящий .xlsx с бэкенда) ----
-async function downloadExcel() {
-  const start = dateAt(state.from).toISOString().slice(0, 10);
-  const end = dateAt(state.to).toISOString().slice(0, 10);
-  const level = state.view === "dekad" ? "dekad" : state.view === "annual" ? "month" : "day";
-  const body = { station: state.station, parameter: state.metric, start, end, level };
-  try {
-    const response = await fetch("/api/export.xlsx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!response.ok) throw new Error("http " + response.status);
-    const blob = await response.blob();
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `arhiv-${state.station}-${state.metric}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  } catch (error) {
-    get("side-note").textContent = "Выгрузка .xlsx требует запущенный расчётный сервер (python -m meteo.serve).";
-  }
+function downloadExcel() {
+  const rows = (state.view === "series" && state.step === "day" ? shown : monthShown);
+  const head = ["Период", "Значение", "Покрытие", "Статус"];
+  const body = rows.map(item => {
+    const coverage = item.entry ? `${item.entry.cov}/${item.entry.threshold}` : (item.coverage || "");
+    const status = Number.isFinite(item.value) ? "в расчёте" : "нет пригодного значения";
+    const value = Number.isFinite(item.value) ? String(item.value).replace(".", ",") : "";
+    return [item.label || item.key || "", value, coverage, status];
+  });
+  const table = [head, ...body].map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta charset="utf-8"></head><body><table>${table}</table></body></html>`;
+  const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `arhiv-${state.station}-${state.metric}.xls`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function printCharts() {
+  const images = [...document.querySelectorAll(".module canvas")]
+    .filter(canvas => canvas.width > 2)
+    .map(canvas => {
+      const image = document.createElement("canvas");
+      image.width = canvas.width; image.height = canvas.height;
+      const ctx = image.getContext("2d");
+      ctx.fillStyle = "#1d282a"; ctx.fillRect(0, 0, image.width, image.height);
+      ctx.drawImage(canvas, 0, 0);
+      return `<img src="${image.toDataURL("image/png")}" alt="График наблюдений" style="display:block;width:100%;margin-bottom:20px">`;
+    });
+  const roses = [...document.querySelectorAll(".module .rose-svg")].map(svg => {
+    const copy = svg.cloneNode(true);
+    copy.querySelectorAll("text").forEach(node => node.setAttribute("fill", palette.ink));
+    copy.setAttribute("style", "background:#1d282a;max-width:600px;display:block;margin:20px auto");
+    return copy.outerHTML;
+  });
+  const page = window.open("", "charts");
+  if (!page) return;
+  page.document.write(`<!doctype html><title>Графики</title><body style="background:#131c1e;color:#e6efeb">${images.join("")}${roses.join("")}<script>addEventListener("load",()=>print())<\/script></body>`);
+  page.document.close();
 }
 
 function drawDaily() {
@@ -685,6 +904,7 @@ function drawDaily() {
         ctx.arc(x(index), y(item.value), 4, 0, Math.PI * 2);
         ctx.fill();
       });
+      paintGuides(ctx, x, y, shown);
     }
   });
   get("chart")._frame = frame;
@@ -696,9 +916,280 @@ function drawDaily() {
   };
 }
 
+function overlayModel(picked) {
+  const choice = picked || {};
+  const keys = Object.keys(choice).filter(key => stationData().series[key]);
+  return keys.flatMap(key => {
+    const chosen = choice[key] || [];
+    const days = stationData().series[key].days || [];
+    const bad = anomalySet(key);
+    const rows = [];
+    if (state.step === "day") {
+      for (let index = state.from; index <= state.to && index < days.length; index += 1) {
+        const entry = days[index];
+        const anomaly = !!(entry && entry.valid && entry.v != null && bad.has(index));
+        const clean = entry && entry.valid && entry.v != null && !anomaly;
+        rows.push({
+          x: index,
+          label: entry ? entry.d : "",
+          mean: clean ? entry.v : null,
+          median: null,
+          min: clean && entry.min != null ? entry.min : null,
+          max: clean && entry.max != null ? entry.max : null,
+          red: anomaly ? entry.v : null
+        });
+      }
+    } else {
+      const months = [];
+      let cursor = state.from;
+      while (cursor <= state.to && cursor < days.length) {
+        const date = dateAt(cursor);
+        const monthEnd = dayIndex(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).toISOString().slice(0, 10));
+        const end = Math.min(monthEnd, state.to, days.length - 1);
+        const clean = [];
+        const reds = [];
+        for (let index = cursor; index <= end; index += 1) {
+          const entry = days[index];
+          if (!entry || entry.v == null || !entry.valid) continue;
+          if (bad.has(index)) reds.push(entry.v);
+          else clean.push(entry);
+        }
+        const values = clean.map(entry => entry.v).sort((a, b) => a - b);
+        const mid = values.length ? (values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2) : null;
+        rows.push({
+          x: (cursor + end) / 2,
+          label: monthName.format(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))),
+          mean: values.length ? average(values) : null,
+          median: mid,
+          min: clean.length ? Math.min(...clean.map(entry => entry.min != null ? entry.min : entry.v)) : null,
+          max: clean.length ? Math.max(...clean.map(entry => entry.max != null ? entry.max : entry.v)) : null,
+          reds
+        });
+        cursor = end + 1;
+      }
+    }
+    const meanPoints = rows.map(row => row.mean);
+    let trend = null;
+    if (chosen.includes("trend")) {
+      const good = rows.map((row, index) => ({ index, v: row.mean })).filter(point => point.v != null);
+      if (good.length >= 3) {
+        const xs = good.map(point => point.index);
+        const ys = good.map(point => point.v);
+        const meanX = average(xs);
+        const meanY = average(ys);
+        const den = xs.reduce((sum, value) => sum + (value - meanX) ** 2, 0);
+        const slope = den ? xs.reduce((sum, value, index) => sum + (value - meanX) * (ys[index] - meanY), 0) / den : 0;
+        trend = rows.map((row, index) => row.mean == null ? null : meanY + (index - meanX) * slope);
+      }
+    }
+    const reconstruction = state.impute && state.step === "day" && key !== "wind_dir" && chosen.includes("mean") ? reconstructionFor(key) : null;
+    return chosen.filter(stat => stat !== "trend" || trend).map(stat => {
+      const line = { key, stat, rows, values: stat === "trend" ? trend : rows.map(row => row[stat]) };
+      if (stat === "mean" && reconstruction) {
+        line.imputed = { values: rows.map(row => reconstruction.values[row.x] ?? null), mask: rows.map(row => !!reconstruction.mask[row.x]) };
+      }
+      return line;
+    });
+  });
+}
+
+function drawOverlay(canvas, legend, picked) {
+  const lines = overlayModel(picked);
+  if (!canvas) return;
+  if (!lines.length) {
+    const { ctx, width, height } = context(canvas);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = palette.muted;
+    ctx.font = "15px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Выберите параметр в списке модуля", width / 2, height / 2);
+    if (legend) legend.innerHTML = "";
+    return;
+  }
+  if (legend) {
+    legend.innerHTML = lines.map(line => `<span style="--series:${PARAMS[line.key][2]}"><i data-stat="${line.stat}"></i>${PARAMS[line.key][0]}, ${LINE_STYLE[line.stat].name}</span>`).join("");
+    if (state.impute) {
+      const eligible = lines.filter(line => line.key !== "wind_dir");
+      if (!eligible.length) legend.innerHTML += `<span class="impute-note">Направление ветра не интерполируется</span>`;
+      else if (state.step !== "day") legend.innerHTML += `<span class="impute-note">интерполяция только для шага Дни</span>`;
+      else if (eligible.some(line => line.stat === "mean")) legend.innerHTML += `<span class="imputed-legend"><i></i>пропуски восстановлены, это не измерение</span>`;
+      else legend.innerHTML += `<span class="impute-note">Для интерполяции включите Среднее</span>`;
+    }
+  }
+  const byUnit = new Map();
+  lines.forEach(line => {
+    const unit = PARAMS[line.key][1];
+    // Anomaly markers are measurements too: include them in the same scale as
+    // the line so they remain visible rather than escaping into axis labels.
+    const values = [...line.values];
+    if (line.imputed) values.push(...line.imputed.values);
+    if (line.stat === "mean") {
+      line.rows.forEach(row => values.push(...(row.red != null ? [row.red] : (row.reds || []))));
+    }
+    if (!byUnit.has(unit)) byUnit.set(unit, []);
+    values.forEach(value => { if (Number.isFinite(value)) byUnit.get(unit).push(value); });
+  });
+  const units = [...byUnit.keys()];
+  const scales = new Map();
+  units.forEach(unit => {
+    const { low: min, high: max } = scale(byUnit.get(unit), value => [value]);
+    const ticks = [0, 1, 2, 3, 4].map(step => min + (max - min) * step / 4);
+    scales.set(unit, { min, max, ticks });
+  });
+  const { ctx, width, height } = context(canvas);
+  const normalized = units.length > 2;
+  const dual = units.length === 2;
+  ctx.font = "13px 'Roboto Mono', monospace";
+  const axisWidth = unit => Math.max(44, ...scales.get(unit).ticks.map(tick => ctx.measureText(format.format(tick)).width)) + 14;
+  const pad = { left: normalized ? 58 : axisWidth(units[0]), right: dual ? axisWidth(units[1]) : 18, top: 28, bottom: 36 };
+  const plotW = Math.max(1, width - pad.left - pad.right);
+  const plotH = Math.max(1, height - pad.top - pad.bottom);
+  const xs = lines[0].rows.map(row => row.x);
+  const xOf = index => pad.left + (xs.length <= 1 ? plotW / 2 : index / (xs.length - 1) * plotW);
+  const axis = { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] };
+  const yRaw = (shown, rule) => pad.top + (1 - (shown - rule.min) / (rule.max - rule.min)) * plotH;
+  const yOf = (value, scale) => normalized
+    ? yRaw((value - scale.min) / (scale.max - scale.min) * 100, axis)
+    : yRaw(value, scale);
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "13px 'Roboto Mono', monospace";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = palette.muted;
+  const left = normalized ? axis : scales.get(units[0]);
+  left.ticks.forEach(tick => {
+    const y = yRaw(tick, left);
+    ctx.strokeStyle = palette.line;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(width - pad.right, y);
+    ctx.stroke();
+    ctx.fillText(format.format(tick), pad.left - 6, y);
+  });
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(normalized ? "Шкала 0-100" : units[0], pad.left, 6);
+  if (dual) {
+    ctx.textAlign = "right";
+    ctx.fillText(units[1], width - pad.right, 6);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    scales.get(units[1]).ticks.forEach(tick => ctx.fillText(format.format(tick), width - pad.right + 6, yRaw(tick, scales.get(units[1]))));
+  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad.left, pad.top, plotW, plotH);
+  ctx.clip();
+  lines.forEach(line => {
+    const style = LINE_STYLE[line.stat];
+    const scale = scales.get(PARAMS[line.key][1]);
+    ctx.save();
+    ctx.strokeStyle = PARAMS[line.key][2];
+    ctx.fillStyle = PARAMS[line.key][2];
+    ctx.globalAlpha = style.alpha;
+    ctx.lineWidth = style.width;
+    ctx.setLineDash(style.dash);
+    if (line.key === "wind_dir") {
+      line.values.forEach((value, index) => {
+        if (!Number.isFinite(value)) return;
+        ctx.beginPath();
+        ctx.arc(xOf(index), yOf(value, scale), 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else {
+      ctx.beginPath();
+      let open = false;
+      line.values.forEach((value, index) => {
+        if (!Number.isFinite(value)) { open = false; return; }
+        const x = xOf(index);
+        const y = yOf(value, scale);
+        if (!open) { ctx.moveTo(x, y); open = true; }
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // Keep a one-day selection and isolated observations visible.
+      ctx.setLineDash([]);
+      line.values.forEach((value, index) => {
+        if (!Number.isFinite(value)) return;
+        if (Number.isFinite(line.values[index - 1]) || Number.isFinite(line.values[index + 1])) return;
+        ctx.beginPath();
+        ctx.arc(xOf(index), yOf(value, scale), 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    ctx.restore();
+  });
+  lines.forEach(line => {
+    if (!line.imputed) return;
+    const rule = scales.get(PARAMS[line.key][1]);
+    paintReconstruction(ctx, xOf, value => yOf(value, rule), line.imputed);
+  });
+  ctx.fillStyle = "rgba(232,154,148,0.55)";
+  ctx.globalAlpha = 1;
+  lines.filter(line => line.stat === "mean").forEach(line => {
+    const scale = scales.get(PARAMS[line.key][1]);
+    line.rows.forEach((row, index) => {
+      const marks = row.red != null ? [row.red] : (row.reds || []);
+      marks.forEach(value => {
+        if (!Number.isFinite(value)) return;
+        ctx.beginPath();
+        ctx.arc(xOf(index), yOf(value, scale), 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+  });
+  ctx.restore();
+  ctx.fillStyle = palette.muted;
+  ctx.font = "12px 'Roboto Mono', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  const tickCount = Math.min(width < 540 ? 4 : 6, xs.length);
+  let previousRight = -Infinity;
+  for (let step = 0; step < tickCount; step += 1) {
+    const index = Math.round(step * (xs.length - 1) / Math.max(1, tickCount - 1));
+    const label = lines[0].rows[index].label || "";
+    const half = ctx.measureText(label).width / 2;
+    const center = Math.max(pad.left + half, Math.min(width - pad.right - half, xOf(index)));
+    if (center - half < previousRight + 8) continue;
+    ctx.fillText(label, center, height - 4);
+    previousRight = center + half;
+  }
+  canvas._rows = lines[0].rows;
+  canvas._lines = lines;
+  canvas._frame = { x: xOf, width, height, pad, plotWidth: plotW, plotHeight: plotH };
+}
+
+function renderPickers() {
+  const menu = get("param-menu");
+  const settings = get("series-settings");
+  if (!menu || !settings || !data) return;
+  const available = (stationData().parameters || []).filter(key => PARAMS[key] && stationData().series[key]);
+  Object.keys(state.picked).forEach(key => { if (!available.includes(key)) delete state.picked[key]; });
+  if (!Object.keys(state.picked).length && available.includes("t_air")) state.picked.t_air = ["mean"];
+  menu.innerHTML = available.map(key => {
+    const pressed = !!state.picked[key];
+    return `<button class="parameter" type="button" data-param="${key}" style="--series:${PARAMS[key][2]}" aria-pressed="${pressed}"><span class="select-mark"></span><span>${PARAMS[key][0]}</span><span class="unit">${PARAMS[key][1]}</span></button>`;
+  }).join("");
+  settings.innerHTML = Object.keys(state.picked).filter(key => available.includes(key)).map(key => {
+    const stats = key === "wind_dir" ? ["mean"] : Object.keys(LINE_STYLE);
+    const buttons = stats.map(stat => {
+      const pressed = (state.picked[key] || []).includes(stat);
+      return `<button type="button" class="stat-toggle" data-key="${key}" data-stat="${stat}" aria-pressed="${pressed}" style="--series:${PARAMS[key][2]}"><i></i>${LINE_STYLE[stat].name}</button>`;
+    }).join("");
+    return `<div class="series-row" style="--series:${PARAMS[key][2]}"><div class="series-label"><i class="series-dot"></i>${PARAMS[key][0]}</div>${buttons}</div>`;
+  }).join("");
+  const first = Object.keys(state.picked)[0];
+  if (first) {
+    state.metric = first;
+    const select = get("metric");
+    if (select && [...select.options].some(option => option.value === first)) select.value = first;
+  }
+}
+
 function drawMain() {
   get("trend-month-field").hidden = state.view !== "trend";
   hidePlotEmpty("chart");
+  if (state.view === "series") return drawOverlay();
   if (state.view === "annual") return drawAnnual();
   if (state.view === "trend") return drawMonthTrend();
   if (state.view === "compare") return drawCompare();
@@ -754,12 +1245,15 @@ function drawMain() {
         ctx.stroke();
         ctx.setLineDash([]);
       }
+      paintGuides(ctx, x, y, shown);
     }
   });
   get("chart")._frame = frame;
   const bits = ["месячное среднее"];
   if (band) bits.push("полоса 10-90% по суточным значениям месяца");
   if (on("opt-ma")) bits.push("скользящее среднее");
+  if (on("opt-median")) bits.push("медиана");
+  if (state.impute && state.step === "day" && state.metric !== "wind_dir") bits.push("пропуски восстановлены, это не измерение");
   get("main-legend").textContent = bits.join(", ");
   get("main-title").textContent = metrics[state.metric][0];
 }
@@ -842,15 +1336,15 @@ function sectorPath(cx, cy, r0, r1, a0, a1) {
 }
 
 // ---- роза ветров: те же корзины, рисунок из SVG, чтобы круг не растягивался ----
-function drawRose() {
-  const panel = get("rose-panel");
-  panel.hidden = !on("opt-rose");
-  if (panel.hidden) return;
-  const svg = get("rose");
+function drawRose(root) {
+  const svg = root ? root.querySelector(".rose-svg") : get("rose");
+  if (!svg) return;
   const frame = svg.closest(".rose-frame");
-  const legend = get("rose-legend");
-  const table = get("rose-table");
-  const empty = get("rose-empty");
+  const legend = root ? root.querySelector(".rose-legend") : get("rose-legend");
+  const table = root ? root.querySelector(".rose-table") : get("rose-table");
+  const empty = root ? root.querySelector(".rose-empty") : get("rose-empty");
+  const note = root ? root.querySelector(".rose-note") : get("rose-note");
+  if (!legend || !table || !empty) return;
   const block = windDirectionBlock(iso(state.from), iso(state.to));
   const { bins, any } = collectWind();
   const calm = bins[0];
@@ -875,7 +1369,7 @@ function drawRose() {
     legend.innerHTML = "";
     table.innerHTML = "";
     if (frame) frame.hidden = true;
-    get("rose-note").textContent = "";
+    if (note) note.textContent = "";
     empty.hidden = false;
     empty.textContent = block || "В этом окне нет пригодных срочных данных ветра.";
     return;
@@ -886,7 +1380,7 @@ function drawRose() {
   paintTable();
   const excluded = roseExclusionNote();
   const calmOnly = directional === 0;
-  get("rose-note").textContent = calmOnly
+  if (note) note.textContent = calmOnly
     ? `Только штиль: ${calm}. Ненулевых направлений нет. Штиль считается при 0 м/с.${excluded ? " " + excluded + "." : ""}`
     : `Пригодных срочных наблюдений: ${total}. Штиль: ${calm} (${format.format(100 * calm / total)}%). Знаменатель включает штиль.${excluded ? " " + excluded + "." : ""}`;
   const cx = 200;
@@ -898,7 +1392,7 @@ function drawRose() {
     return count;
   });
   const max = Math.max(...sectorTotals, 1);
-  const parts = [`<g fill="none" stroke="#3B5547" stroke-width="1">`];
+  const parts = [`<g fill="none" stroke="${palette.line}" stroke-width="1">`];
   for (let ring = 1; ring <= 3; ring += 1) {
     const r = radius * ring / 3;
     parts.push(`<circle cx="${cx}" cy="${cy}" r="${r.toFixed(2)}"></circle>`);
@@ -998,27 +1492,44 @@ function pointerZone(x, left, right) {
 }
 
 function paintOverview() {
-  const series = (seriesData().days || []).map(row => row.v);
+  const days = seriesData().days || [];
+  const bad = anomalySet(state.metric);
+  const series = days.map((row, index) => row.valid && Number.isFinite(row.v) && !bad.has(index) ? row.v : null);
+  const filled = state.impute && state.step === "day" && state.metric !== "wind_dir" ? reconstructionFor(state.metric) : null;
   const canvas = get("overview");
   const box = canvas.getBoundingClientRect();
   if (box.width < 2 || box.height < 2) return;
   const { ctx, width, height } = context(canvas);
   ctx.clearRect(0, 0, width, height);
-  const values = series.filter(value => value !== null && state.metric !== "wind_dir");
+  const anomalies = days.map((row, index) => row.valid && Number.isFinite(row.v) && bad.has(index) ? row.v : null);
+  const values = series.concat(filled ? filled.values : [], anomalies).filter(Number.isFinite);
   if (values.length && state.metric !== "wind_dir") {
-    const low = Math.min(...values), high = Math.max(...values);
+    const { low, high } = scale(values, value => [value]);
+    const x = index => index / Math.max(1, series.length - 1) * width;
+    const y = value => height - 8 - (value - low) / (high - low || 1) * Math.max(1, height - 16);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, width, height);
+    ctx.clip();
     ctx.strokeStyle = palette.accent;
     ctx.lineWidth = 1;
     ctx.beginPath();
     let open = false;
     series.forEach((value, index) => {
-      if (value === null) { open = false; return; }
-      const x = index / Math.max(1, series.length - 1) * width;
-      const y = height - 8 - (value - low) / (high - low || 1) * (height - 16);
-      if (!open) { ctx.moveTo(x, y); open = true; }
-      else ctx.lineTo(x, y);
+      if (!Number.isFinite(value)) { open = false; return; }
+      if (!open) { ctx.moveTo(x(index), y(value)); open = true; }
+      else ctx.lineTo(x(index), y(value));
     });
     ctx.stroke();
+    if (filled) paintReconstruction(ctx, x, y, filled);
+    ctx.fillStyle = "rgba(232,154,148,0.55)";
+    anomalies.forEach((value, index) => {
+      if (!Number.isFinite(value)) return;
+      ctx.beginPath();
+      ctx.arc(x(index), y(value), 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
   }
 }
 
@@ -1029,7 +1540,8 @@ function placeSelection() {
   sel.style.left = `${box.left}px`;
   sel.style.width = `${Math.max(0, box.right - box.left)}px`;
   const grain = state.view === "series" && state.step === "day" ? ", сутки" : "";
-  get("window-label").textContent = `${longDate.format(dateAt(state.from))} - ${longDate.format(dateAt(state.to))}${grain}`;
+  const label = get("window-label");
+  if (label) label.textContent = `${longDate.format(dateAt(state.from))} - ${longDate.format(dateAt(state.to))}${grain}`;
 }
 
 function drawTimeline() {
@@ -1080,44 +1592,394 @@ function syncDateFields() {
   if (end.value !== b) end.value = b;
 }
 
+let moduleDrag = "";
+let moduleRefitTries = 0;
+
+function availableParams() {
+  return (stationData().parameters || []).filter(key => PARAMS[key] && stationData().series[key]);
+}
+
+function defaultPicked() {
+  const available = availableParams();
+  const key = available.includes(state.metric) ? state.metric : available[0];
+  return key ? { [key]: ["mean"] } : {};
+}
+
+function pruneModules() {
+  const available = availableParams();
+  state.modules.forEach(module => {
+    if (module.kind !== "chart" || !module.picked) return;
+    Object.keys(module.picked).forEach(key => {
+      if (!available.includes(key)) delete module.picked[key];
+    });
+  });
+  const first = state.modules.find(module => module.kind === "chart" && module.picked && Object.keys(module.picked).length);
+  if (first) state.metric = Object.keys(first.picked)[0];
+}
+
+function moduleMenu(module) {
+  return availableParams().map(key => {
+    const on = !!(module.picked && module.picked[key]);
+    const stats = key === "wind_dir" ? ["mean"] : Object.keys(LINE_STYLE);
+    const lines = on ? `<div class="line-row">${stats.map(stat => {
+      const pressed = (module.picked[key] || []).includes(stat);
+      return `<button type="button" class="stat-toggle" data-key="${key}" data-stat="${stat}" aria-pressed="${pressed}" style="--series:${PARAMS[key][2]}"><i></i>${LINE_STYLE[stat].name}</button>`;
+    }).join("")}</div>` : "";
+    return `<div class="param-line" style="--series:${PARAMS[key][2]}"><button class="parameter" type="button" data-param="${key}" aria-pressed="${on}"><span class="select-mark"></span><span>${PARAMS[key][0]}</span><span class="unit">${PARAMS[key][1]}</span></button>${lines}</div>`;
+  }).join("");
+}
+
+function bindPlotTip(canvas) {
+  const box = canvas.parentElement && canvas.parentElement.querySelector(".tip");
+  if (!box) return;
+  canvas.addEventListener("pointermove", event => {
+    const frame = canvas._frame;
+    const rows = canvas._rows || [];
+    const lines = canvas._lines || [];
+    if (!frame || !rows.length) { box.hidden = true; return; }
+    const local = event.clientX - canvas.getBoundingClientRect().left;
+    let nearest = 0;
+    let best = Infinity;
+    rows.forEach((_, index) => {
+      const distance = Math.abs(frame.x(index) - local);
+      if (distance < best) { best = distance; nearest = index; }
+    });
+    const row = rows[nearest];
+    const bits = [row.label || ""].concat(lines.map(line => {
+      const value = line.values[nearest];
+      const estimated = line.imputed && line.imputed.mask[nearest];
+      const shown = estimated
+        ? `${format.format(line.imputed.values[nearest])} ${PARAMS[line.key][1]}, восстановлено, не измерение`
+        : value == null ? "нет" : `${format.format(value)} ${PARAMS[line.key][1]}`;
+      return `${PARAMS[line.key][0]}, ${LINE_STYLE[line.stat].name}: ${shown}`;
+    }));
+    box.hidden = false;
+    lines.filter(line => line.stat === "mean").forEach(line => {
+      const source = line.rows[nearest];
+      const outliers = source ? (source.red != null ? [source.red] : (source.reds || [])) : [];
+      if (outliers.length) bits.push(`${PARAMS[line.key][0]}, выбросы: ${outliers.filter(Number.isFinite).map(value => format.format(value)).join("; ")} ${PARAMS[line.key][1]}`);
+    });
+    box.textContent = bits.join("\n");
+    const canvasRect = canvas.getBoundingClientRect();
+    const workRect = document.querySelector(".work").getBoundingClientRect();
+    const visibleTop = Math.max(8, workRect.top - canvasRect.top + 8);
+    const visibleBottom = Math.min(canvas.clientHeight - 8, workRect.bottom - canvasRect.top - 8);
+    const room = visibleBottom - visibleTop;
+    if (room < 40) { box.hidden = true; return; }
+    box.style.maxHeight = `${room}px`;
+    box.style.left = `${Math.max(8, Math.min(canvas.clientWidth - box.offsetWidth - 8, frame.x(nearest) + 8))}px`;
+    box.style.top = `${Math.max(visibleTop, Math.min(visibleBottom - box.offsetHeight, event.clientY - canvasRect.top + 12))}px`;
+  });
+  canvas.addEventListener("pointerleave", event => { if (!box.contains(event.relatedTarget)) box.hidden = true; });
+  box.addEventListener("pointerleave", event => { if (event.relatedTarget !== canvas) box.hidden = true; });
+}
+
+function paintChart(module, node) {
+  const host = node.querySelector(".module-plots");
+  const legend = node.querySelector(".module-legend");
+  const keys = Object.keys(module.picked || {}).filter(key => (module.picked[key] || []).length && PARAMS[key]);
+  if (module.layout === "split") {
+    host.classList.add("split");
+    host.innerHTML = keys.length ? keys.map(key => `<div class="plot-card"><h3>${PARAMS[key][0]}</h3><p class="legend module-legend"></p><div class="plot"><canvas data-key="${key}"></canvas><div class="tip" hidden></div></div></div>`).join("") : `<p class="empty-module">Включите параметр в списке.</p>`;
+    if (legend) legend.innerHTML = "";
+    keys.forEach(key => {
+      const canvas = host.querySelector(`[data-key="${key}"]`);
+      const cardLegend = canvas.closest(".plot-card").querySelector(".module-legend");
+      drawOverlay(canvas, cardLegend, { [key]: module.picked[key] });
+      bindPlotTip(canvas);
+    });
+  } else {
+    host.classList.remove("split");
+    host.innerHTML = `<div class="plot plot-tall"><canvas></canvas><div class="tip" hidden></div></div>`;
+    const canvas = host.querySelector("canvas");
+    drawOverlay(canvas, legend, module.picked);
+    bindPlotTip(canvas);
+  }
+}
+
+function paintRose(node) {
+  const host = node.querySelector(".module-plots");
+  if (!host.querySelector(".rose-svg")) {
+    host.innerHTML = `<div class="rose-layout"><div class="rose-frame"><svg class="rose-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet"></svg></div><p class="rose-note"></p><ul class="rose-legend"></ul><p class="rose-empty" hidden></p><details class="rose-numbers"><summary>Числа по секторам</summary><div class="table-scroll"><table class="rose-table"></table></div></details></div>`;
+  }
+  drawRose(host);
+}
+
+function moveModule(fromId, toId) {
+  if (!fromId || fromId === toId) return;
+  const from = state.modules.findIndex(module => module.id === fromId);
+  const to = state.modules.findIndex(module => module.id === toId);
+  if (from < 0 || to < 0) return;
+  const [item] = state.modules.splice(from, 1);
+  state.modules.splice(to, 0, item);
+  update();
+}
+
+function focusModule(id) {
+  requestAnimationFrame(() => {
+    const node = get("modules").querySelector(`[data-module="${id}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: "instant", block: "nearest" });
+    node.querySelector(".drag").focus({ preventScroll: true });
+  });
+}
+
+function closeParameterMenus(except = null) {
+  document.querySelectorAll(".mod-menu.open").forEach(menu => {
+    if (menu === except) return;
+    menu.classList.remove("open");
+    menu.previousElementSibling.setAttribute("aria-expanded", "false");
+  });
+}
+
+function placeParameterMenu(menu) {
+  if (!menu || !menu.classList.contains("open")) return;
+  // The mobile panel is bounded by the pinned header and timeline in CSS.
+  if (window.innerWidth <= 760) { menu.removeAttribute("style"); return; }
+  const button = menu.previousElementSibling.getBoundingClientRect();
+  const topLimit = document.querySelector(".app-header").getBoundingClientRect().bottom + 12;
+  const bottomLimit = document.querySelector(".timeline").getBoundingClientRect().top - 12;
+  const width = Math.min(660, window.innerWidth - 48);
+  menu.style.width = `${width}px`;
+  const left = Math.max(24, Math.min(window.innerWidth - width - 24, button.right - width));
+  const below = bottomLimit - button.bottom - 8;
+  const above = button.top - 8 - topLimit;
+  const wanted = Math.min(460, menu.scrollHeight);
+  let top, space;
+  if (below >= Math.min(wanted, 240)) { top = Math.max(topLimit, button.bottom + 8); space = bottomLimit - top; }
+  else if (above >= Math.min(wanted, 240)) { space = Math.min(wanted, above); top = button.top - 8 - space; }
+  else { top = topLimit; space = bottomLimit - topLimit; }
+  Object.assign(menu.style, { left: `${left}px`, right: "auto", top: `${top}px`, bottom: "auto", maxHeight: `${Math.max(80, space)}px` });
+}
+
+function buildModule(module) {
+  const article = document.createElement("article");
+  article.className = "panel module";
+  article.dataset.module = module.id;
+  article.setAttribute("aria-labelledby", `${module.id}-title`);
+  const dragControl = `<div class="drag-group"><button type="button" class="drag" draggable="true" title="Перетащить модуль. Для перемещения с клавиатуры: Alt и клавиши вверх или вниз." aria-label="Переместить модуль" aria-expanded="false" aria-controls="${module.id}-move"><svg viewBox="0 0 14 18" aria-hidden="true"><circle cx="4" cy="4" r="1.4"/><circle cx="10" cy="4" r="1.4"/><circle cx="4" cy="9" r="1.4"/><circle cx="10" cy="9" r="1.4"/><circle cx="4" cy="14" r="1.4"/><circle cx="10" cy="14" r="1.4"/></svg><span>Перетащить</span></button><div class="move-controls" id="${module.id}-move" hidden><button type="button" data-move="-1">Выше</button><button type="button" data-move="1">Ниже</button></div></div>`;
+  const remove = `<button type="button" class="remove-module" data-remove aria-label="Удалить модуль" title="Удалить модуль">×</button>`;
+  if (module.kind === "rose") {
+    article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">Роза ветров</h2>${remove}</header><div class="module-plots"></div>`;
+  } else {
+    const title = module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
+    article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">${title}</h2><div class="layout-switch" role="group" aria-label="Расположение графиков"><button type="button" data-layout="overlay">Вместе</button><button type="button" data-layout="split">Раздельно</button></div><div class="mod-drop"><button type="button" class="mod-toggle" aria-expanded="false" aria-controls="${module.id}-params">Параметры (0)</button><div class="mod-menu" id="${module.id}-params" aria-label="Параметры графика"></div></div>${remove}</header><div class="module-legend legend"></div><div class="module-plots"></div><p class="chart-help"><span class="outlier-key" aria-hidden="true"></span>Выбросы учтены в масштабе.</p>`;
+  }
+  const drag = article.querySelector(".drag");
+  const moveControls = article.querySelector(".move-controls");
+  const moveBy = delta => {
+    const index = state.modules.findIndex(item => item.id === module.id);
+    const destination = state.modules[index + delta];
+    if (!destination) return;
+    moveModule(module.id, destination.id);
+    get("module-status").textContent = `Модуль перемещён. Позиция ${index + delta + 1} из ${state.modules.length}.`;
+    focusModule(module.id);
+  };
+  drag.addEventListener("click", () => {
+    moveControls.hidden = !moveControls.hidden;
+    drag.setAttribute("aria-expanded", String(!moveControls.hidden));
+  });
+  drag.addEventListener("keydown", event => {
+    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault();
+      moveBy(event.key === "ArrowUp" ? -1 : 1);
+    }
+    if (event.key === "Escape") { moveControls.hidden = true; drag.setAttribute("aria-expanded", "false"); }
+  });
+  moveControls.querySelectorAll("[data-move]").forEach(button => button.addEventListener("click", () => moveBy(Number(button.dataset.move))));
+  drag.addEventListener("dragstart", event => {
+    moduleDrag = module.id;
+    closeParameterMenus();
+    moveControls.hidden = true;
+    drag.setAttribute("aria-expanded", "false");
+    article.classList.add("is-dragging");
+    event.dataTransfer.setData("text/plain", module.id);
+    event.dataTransfer.effectAllowed = "move";
+  });
+  drag.addEventListener("dragend", () => {
+    moduleDrag = "";
+    article.classList.remove("is-dragging");
+    document.querySelectorAll(".drop-target").forEach(node => node.classList.remove("drop-target"));
+  });
+  article.addEventListener("dragover", event => {
+    if (!moduleDrag || moduleDrag === module.id) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    article.classList.add("drop-target");
+  });
+  article.addEventListener("dragleave", event => {
+    if (event.relatedTarget && article.contains(event.relatedTarget)) return;
+    article.classList.remove("drop-target");
+  });
+  article.addEventListener("drop", event => {
+    if (!moduleDrag) return;
+    event.preventDefault();
+    const moving = moduleDrag;
+    moduleDrag = "";
+    article.classList.remove("drop-target");
+    moveModule(moving, module.id);
+    focusModule(moving);
+  });
+  article.querySelector("[data-remove]").addEventListener("click", () => {
+    const index = state.modules.findIndex(item => item.id === module.id);
+    state.modules = state.modules.filter(item => item.id !== module.id);
+    if (!state.modules.length) state.modules.push({ id: `mod-${Date.now()}`, kind: "chart", layout: "overlay", picked: defaultPicked() });
+    update();
+    focusModule(state.modules[Math.min(index, state.modules.length - 1)].id);
+  });
+  article.querySelectorAll("[data-layout]").forEach(button => button.addEventListener("click", () => {
+    module.layout = button.dataset.layout;
+    update();
+  }));
+  const toggle = article.querySelector(".mod-toggle");
+  const menu = article.querySelector(".mod-menu");
+  if (toggle && menu) {
+    toggle.addEventListener("click", event => {
+      event.stopPropagation();
+      closeParameterMenus(menu);
+      const opening = !menu.classList.contains("open");
+      menu.classList.toggle("open", opening);
+      toggle.setAttribute("aria-expanded", String(opening));
+      if (opening) placeParameterMenu(menu);
+    });
+    menu.addEventListener("keydown", event => {
+      if (event.key === "Escape") { closeParameterMenus(); toggle.focus(); event.stopPropagation(); }
+    });
+    menu.addEventListener("click", event => {
+      event.stopPropagation();
+      if (event.target.closest("[data-close-menu]")) { closeParameterMenus(); toggle.focus(); return; }
+      const stat = event.target.closest("[data-stat]");
+      const param = event.target.closest("[data-param]");
+      if (stat) {
+        const key = stat.dataset.key;
+        const list = module.picked[key] || [];
+        const name = stat.dataset.stat;
+        module.picked[key] = list.includes(name) ? list.filter(item => item !== name) : list.concat(name);
+        if (!module.picked[key].length) delete module.picked[key];
+        update();
+        (menu.querySelector(`[data-key="${key}"][data-stat="${name}"]`) || menu.querySelector(`[data-param="${key}"]`)).focus({ preventScroll: true });
+        return;
+      }
+      if (param) {
+        const key = param.dataset.param;
+        if (module.picked[key]) delete module.picked[key];
+        else module.picked[key] = ["mean"];
+        update();
+        menu.querySelector(`[data-param="${key}"]`).focus({ preventScroll: true });
+      }
+    });
+  }
+  return article;
+}
+
+function paintModules() {
+  const root = get("modules");
+  if (!root || !data) return;
+  pruneModules();
+  const stamp = state.modules.map(module => `${module.id}:${module.kind}`).join("|");
+  if (root.dataset.stamp !== stamp) {
+    root.dataset.stamp = stamp;
+    root.replaceChildren(...state.modules.map(buildModule));
+  }
+  state.modules.forEach(module => {
+    const node = root.querySelector(`[data-module="${module.id}"]`);
+    if (!node) return;
+    const title = node.querySelector("h2");
+    if (module.kind === "chart" && title) title.textContent = module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
+    node.querySelectorAll("[data-layout]").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.layout === module.layout));
+    });
+    const position = state.modules.indexOf(module);
+    node.querySelectorAll("[data-move]").forEach(button => {
+      button.disabled = Number(button.dataset.move) < 0 ? position === 0 : position === state.modules.length - 1;
+    });
+    const menu = node.querySelector(".mod-menu");
+    const menuOpen = menu && menu.classList.contains("open");
+    if (menu) {
+      menu.innerHTML = `<div class="params-heading"><strong>Параметры графика</strong><button type="button" data-close-menu aria-label="Закрыть параметры">×</button></div>${moduleMenu(module)}`;
+      if (menuOpen) { menu.classList.add("open"); placeParameterMenu(menu); }
+    }
+    const toggle = node.querySelector(".mod-toggle");
+    if (toggle && module.kind === "chart") {
+      const count = Object.keys(module.picked || {}).length;
+      toggle.textContent = `Параметры (${count})`;
+    }
+    if (module.kind === "rose") paintRose(node);
+    else {
+      paintChart(module, node);
+      const help = node.querySelector(".chart-help");
+      if (help) {
+        const units = new Set(Object.keys(module.picked || {}).map(key => PARAMS[key][1]));
+        help.innerHTML = `<span class="outlier-key" aria-hidden="true"></span>Выбросы учтены в масштабе.${module.layout !== "split" && units.size > 2 ? " Разные единицы: шкала 0-100. Исходные значения в подсказках." : ""}`;
+      }
+    }
+  });
+  const blank = [...root.querySelectorAll("canvas")].some(canvas => canvas.clientWidth < 2);
+  if (blank && moduleRefitTries < 3) {
+    moduleRefitTries += 1;
+    requestAnimationFrame(() => update());
+  } else if (!blank) moduleRefitTries = 0;
+}
+
 function update() {
+  if (!data) return;
+  pruneModules();
   months = buildMonths();
   monthShown = months.filter(inWindow);
   shown = state.view === "series" && state.step === "day" ? dailyPoints() : monthShown;
   document.querySelectorAll("[data-step]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.step === state.step));
   });
+  get("toggle-impute").setAttribute("aria-pressed", String(state.impute));
   const note = get("range-note");
-  if (note) {
-    const span = `${longDate.format(dateAt(state.from))} - ${longDate.format(dateAt(state.to))}`;
-    const grain = state.view === "series" ? (state.step === "day" ? "шаг: сутки" : "шаг: месяцы") : "";
-    note.textContent = state.clipNote || (grain ? `${span}, ${grain}` : span);
-  }
+  if (note) note.textContent = "";
   syncMenus();
   syncDateFields();
   get("range-start").value = state.from;
   get("range-end").value = state.to;
   get("range-start").setAttribute("aria-valuetext", longDate.format(dateAt(state.from)));
   get("range-end").setAttribute("aria-valuetext", longDate.format(dateAt(state.to)));
+  const summary = get("summary-context");
+  if (summary) summary.textContent = `Сводка: ${metrics[state.metric][0].toLowerCase()}, ${state.step === "day" ? "дневные значения" : "месячные значения"}`;
+  document.querySelectorAll("[data-window]").forEach(button => {
+    const span = button.dataset.window;
+    const selected = state.to === lastIndex() && (span === "all" ? state.from === 0 : state.from > 0 && state.from === Math.max(0, lastIndex() - Number(span) + 1));
+    button.setAttribute("aria-pressed", String(selected));
+  });
   renderStats();
-  drawMain();
-  drawAnomaly();
-  drawRose();
-  drawSoil();
+  paintModules();
   drawTimeline();
   renderTable();
 }
 
 function applyPreset(name) {
-  if (name === "ame") { state.view = "series"; state.metric = "t_air"; get("view").value = "series"; setStation("ame60"); }
+  const pick = metric => {
+    state.metric = metric;
+    state.modules = [{ id: `mod-${Date.now()}`, kind: "chart", layout: "overlay", picked: { [metric]: ["mean"] } }];
+  };
+  if (name === "ame") {
+    state.view = "series";
+    pick("t_air");
+    setStation("ame60");
+    return;
+  }
   if (name === "pair") {
-    state.metric = "t_air"; setStation("kr1"); state.view = "compare"; get("view").value = "compare";
-    state.from = Math.max(0, dayIndex("2025-01-01")); state.to = Math.min(state.to, dayIndex("2025-12-31"));
+    pick("t_air");
+    setStation("kr1");
+    state.view = "series";
+    state.from = clampIndex(dayIndex("2025-01-01"));
+    state.to = clampIndex(dayIndex("2025-12-31"));
+    if (state.from > state.to) { const swap = state.from; state.from = state.to; state.to = swap; }
     update();
+    return;
   }
   if (name === "pressure") {
-    state.metric = "pressure_hpa"; setStation("kr1"); state.view = "series"; get("view").value = "series";
-    state.from = Math.max(0, dayIndex("2024-01-01")); state.to = Math.min(state.to, dayIndex("2024-12-31"));
+    pick("pressure_hpa");
+    setStation("kr1");
+    state.view = "series";
+    state.from = clampIndex(dayIndex("2024-01-01"));
+    state.to = clampIndex(dayIndex("2024-12-31"));
+    if (state.from > state.to) { const swap = state.from; state.from = state.to; state.to = swap; }
     update();
   }
 }
@@ -1144,13 +2006,148 @@ function applyTemplate(name) {
   }
 }
 
+const extraBlocks = [];
+
+function importFeedback(message, error = false) {
+  const panel = get("import-feedback");
+  panel.hidden = false;
+  panel.classList.toggle("is-error", error);
+  get("import-message").textContent = message;
+  get("import-message").setAttribute("role", error ? "alert" : "status");
+  panel.scrollIntoView({ block: "start" });
+}
+
+function importDataFile(file) {
+  if (!file) return;
+  const format = /\.json$/i.test(file.name) ? "json" : /\.csv$/i.test(file.name) ? "csv" : "";
+  if (!format) { importFeedback("Выберите файл CSV или JSON.", true); return; }
+  if (file.size > 20 * 1024 * 1024) { importFeedback("Файл слишком большой. Максимальный размер: 20 МБ.", true); return; }
+  const button = get("menu-import");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  const reader = new FileReader();
+  const finish = () => { button.disabled = false; button.removeAttribute("aria-busy"); get("import-file").value = ""; };
+  reader.onerror = () => { finish(); importFeedback("Не удалось прочитать файл. Попробуйте выбрать его ещё раз.", true); };
+  reader.onload = () => {
+    try {
+      const parsed = window.MeteoImport.parse(String(reader.result), format, file.name);
+      const added = parsed.stations.map(descriptor => {
+        let id = descriptor.id;
+        let suffix = 1;
+        while (data.stations[id]) id = `${descriptor.id}-${suffix++}`;
+        data.stations[id] = descriptor.station;
+        stations.push([id, descriptor.name, descriptor.note]);
+        return { ...descriptor, id };
+      });
+      const first = added[0];
+      const metric = first.station.parameters[0];
+      const compatible = state.modules.some(module => module.kind === "chart" && Object.keys(module.picked || {}).some(key => first.station.parameters.includes(key)));
+      if (!compatible) state.modules.push({ id: `mod-${Date.now()}`, kind: "chart", layout: "overlay", picked: { [metric]: ["mean"] } });
+      state.step = "day";
+      setStation(first.id, { metric });
+      importFeedback(`Загружено: ${first.name}. ${added.length > 1 ? `Добавлено станций: ${added.length}. ` : ""}Период: ${first.station.start} - ${first.station.end}. Данные доступны в модулях, шаг: дни. Импорт хранится в этой вкладке.${first.note.includes("value") ? " Поле value/v принято за температуру воздуха (°C)." : ""}`);
+    } catch (error) {
+      importFeedback(`Импорт не выполнен. ${error.message || "Проверьте формат файла."}`, true);
+    } finally { finish(); }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+function addChartBlock(rows, title) {
+  const id = `extra-${Date.now()}`;
+  const block = { id, metric: state.metric, median: false, impute: false, rows: rows || null, title: title || "" };
+  extraBlocks.push(block);
+  const section = document.createElement("section");
+  section.className = "panel mini-block";
+  const keys = (stationData().parameters || []).filter(key => metrics[key]);
+  section.innerHTML = `
+    <div class="panel-head">
+      <strong>${block.title || "График"}</strong>
+      <select data-metric ${block.rows ? "hidden" : ""}>${keys.map(key => `<option value="${key}">${metrics[key][0]}</option>`).join("")}</select>
+      <label><input type="checkbox" data-flag="median"> Медиана</label>
+      <label><input type="checkbox" data-flag="impute"> Пропуски</label>
+      <button type="button" data-remove>Убрать</button>
+    </div>
+    <div class="plot plot-short"><canvas id="${id}"></canvas></div>`;
+  const select = section.querySelector("[data-metric]");
+  if (select) select.value = block.metric;
+  if (select) select.addEventListener("change", () => { block.metric = select.value; update(); });
+  section.querySelectorAll("[data-flag]").forEach(input => input.addEventListener("change", () => {
+    block[input.dataset.flag] = input.checked;
+    update();
+  }));
+  section.querySelector("[data-remove]").addEventListener("click", () => {
+    const index = extraBlocks.indexOf(block);
+    if (index >= 0) extraBlocks.splice(index, 1);
+    section.remove();
+  });
+  get("extra-blocks").append(section);
+  update();
+}
+
+function drawExtraBlocks() {
+  extraBlocks.forEach(block => {
+    const canvas = get(block.id);
+    if (!canvas) return;
+    let items = block.rows;
+    if (!items) {
+      const saved = state.metric;
+      state.metric = block.metric;
+      items = state.step === "day" ? dailyPoints() : buildMonths().filter(inWindow);
+      state.metric = saved;
+    }
+    const savedMetric = state.metric;
+    const median = get("opt-median");
+    const impute = get("opt-impute");
+    const medianWas = median && median.checked;
+    const imputeWas = impute && impute.checked;
+    state.metric = block.metric;
+    if (median) median.checked = !!block.median;
+    if (impute) impute.checked = !!block.impute;
+    drawSeries(canvas, items, {
+      scale: scale(items, item => [item.value]),
+      draw(ctx, x, y) {
+        ctx.strokeStyle = palette.accent;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        let open = false;
+        items.forEach((item, index) => {
+          if (!Number.isFinite(item.value)) { open = false; return; }
+          if (!open) { ctx.moveTo(x(index), y(item.value)); open = true; }
+          else ctx.lineTo(x(index), y(item.value));
+        });
+        ctx.stroke();
+        paintGuides(ctx, x, y, items);
+      }
+    });
+    state.metric = savedMetric;
+    if (median) median.checked = medianWas;
+    if (impute) impute.checked = imputeWas;
+  });
+}
+
 function bootControls() {
+  get("toggle-impute").addEventListener("click", () => {
+    state.impute = !state.impute;
+    update();
+  });
+  get("stations").addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = stations.findIndex(item => item[0] === state.station);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? stations.length - 1 : (index + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1) + stations.length) % stations.length;
+    setStation(stations[next][0], { keep: true });
+    get("stations").querySelector('[aria-checked="true"]').focus();
+  });
   get("stations").addEventListener("click", event => {
     const button = event.target.closest("[data-station]");
     if (button && button.dataset.station !== state.station) setStation(button.dataset.station, { keep: true });
   });
   get("metric").addEventListener("change", () => { state.metric = get("metric").value; update(); });
-  ["opt-ma", "opt-band", "opt-anomaly", "opt-rose", "opt-soil"].forEach(id => get(id).addEventListener("change", update));
+  ["opt-ma", "opt-band", "opt-anomaly", "opt-rose", "opt-soil", "opt-median", "opt-impute"].forEach(id => {
+    const node = get(id);
+    if (node) node.addEventListener("change", update);
+  });
   get("range-start").addEventListener("input", () => {
     editingDates = false;
     state.clipNote = "";
@@ -1180,16 +2177,21 @@ function bootControls() {
   document.querySelectorAll("[data-step]").forEach(button => button.addEventListener("click", () => {
     state.step = button.dataset.step;
     state.view = "series";
-    get("view").value = "series";
     update();
   }));
-  get("table-panel").addEventListener("toggle", renderTable);
+  const tablePanel = get("table-panel");
+  if (tablePanel) tablePanel.addEventListener("toggle", renderTable);
   const brush = get("brush");
-  const brushCursor = clientX => {
+  const brushLocal = clientX => {
     const rect = brush.getBoundingClientRect();
-    if (rect.width < 2) return;
-    const box = selectionBox(rect.width);
-    const mode = pointerZone(clientX - rect.left, box.left, box.right);
+    const scale = rect.width / (brush.clientWidth || rect.width || 1);
+    return (clientX - rect.left) / scale;
+  };
+  const brushCursor = clientX => {
+    const width = brush.clientWidth;
+    if (width < 2) return;
+    const box = selectionBox(width);
+    const mode = pointerZone(brushLocal(clientX), box.left, box.right);
     brush.classList.toggle("is-resize", mode === "start" || mode === "end");
     brush.classList.toggle("is-move", mode === "move");
   };
@@ -1203,10 +2205,10 @@ function bootControls() {
   });
   brush.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
-    const rect = brush.getBoundingClientRect();
-    if (rect.width < 2) return;
-    const box = selectionBox(rect.width);
-    const mode = pointerZone(event.clientX - rect.left, box.left, box.right);
+    const width = brush.clientWidth;
+    if (width < 2) return;
+    const box = selectionBox(width);
+    const mode = pointerZone(brushLocal(event.clientX), box.left, box.right);
     if (!mode) return;
     brush.classList.toggle("is-resize", mode === "start" || mode === "end");
     brush.classList.toggle("is-move", mode === "move");
@@ -1216,12 +2218,12 @@ function bootControls() {
       originX: event.clientX,
       originFrom: state.from,
       originTo: state.to,
-      width: rect.width,
+      width: brush.clientWidth,
       last: box.last
     };
     editingDates = false;
     brush.setPointerCapture(event.pointerId);
-    event.preventDefault();
+  event.preventDefault();
   });
   brush.addEventListener("pointermove", event => {
     if (!brushDrag || event.pointerId !== brushDrag.pointer) return;
@@ -1253,72 +2255,106 @@ function bootControls() {
   };
   brush.addEventListener("pointerup", endBrush);
   brush.addEventListener("pointercancel", endBrush);
-  get("view").addEventListener("change", () => { state.view = get("view").value; update(); });
-  get("trend-month").addEventListener("change", () => { state.trendMonth = Number(get("trend-month").value); update(); });
+  const viewSelect = get("view");
+  if (viewSelect) viewSelect.addEventListener("change", () => { state.view = viewSelect.value; update(); });
+  const trendMonth = get("trend-month");
+  if (trendMonth) trendMonth.addEventListener("change", () => { state.trendMonth = Number(trendMonth.value); update(); });
   get("excel").addEventListener("click", downloadExcel);
-  document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => applyPreset(button.dataset.preset)));
-  document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => applyTemplate(button.dataset.template)));
-  // горизонтальные линии
-  get("line-value").addEventListener("change", () => {
-    const value = parseFloat(get("line-value").value);
-    state.lines = value === value ? [{ value, label: get("line-label").value || String(value), color: palette.warm }] : [];
+  get("pdf").addEventListener("click", printCharts);
+  get("menu-import").addEventListener("click", () => get("import-file").click());
+  get("import-dismiss").addEventListener("click", () => { get("import-feedback").hidden = true; });
+  get("import-file").addEventListener("change", event => importDataFile(event.target.files && event.target.files[0]));
+  const addChart = get("add-chart");
+  const addRose = get("add-rose");
+  if (addChart) addChart.addEventListener("click", () => {
+    state.modules.push({ id: `mod-${Date.now()}`, kind: "chart", layout: "overlay", picked: defaultPicked() });
     update();
+    focusModule(state.modules[state.modules.length - 1].id);
   });
-  // журнал исключений
-  let exclusions = null;
-  let exclusionFilter = "";
-  const stationTitle = { ame60: "АМЕ-60", kr1: "Кр1, поляна", kr2: "Кр2, поле" };
-  function paintExceptions() {
-    const summary = get("exceptions-summary");
-    const body = get("exceptions-rows");
-    const counts = {};
-    exclusions.rows.forEach(row => {
-      const key = `${row.station}|${row.reason}`;
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    summary.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 60).map(([key, count]) => {
-      const [station, why] = key.split("|");
-      const pressed = exclusionFilter === key;
-      return `<button type="button" data-filter="${key}" aria-pressed="${pressed}">${stationTitle[station] || station}: ${why}. ${count}</button>`;
-    }).join("");
-    const rows = exclusions.rows.filter(row => !exclusionFilter || `${row.station}|${row.reason}` === exclusionFilter).slice(0, 200);
-    body.innerHTML = rows.map(row => `<tr><td>${stationTitle[row.station] || row.station}</td><td>${row.when || ""}</td><td>${row.parameter || ""}</td><td>${row.value ?? ""}</td><td>${row.reason}</td><td>${row.file}:${row.line}</td></tr>`).join("")
-      || `<tr><td colspan="6">Для этой причины только счётчик, без отдельных строк в выборке.</td></tr>`;
-  }
-  get("exceptions").addEventListener("click", () => {
-    const open = () => { get("exceptions-panel").hidden = false; paintExceptions(); };
-    if (exclusions) { open(); return; }
-    fetch("/landing/dashboard/exceptions.json").then(response => response.json()).then(payload => {
-      exclusions = payload;
-      open();
-    }).catch(() => { get("side-note").textContent = "Журнал исключений не открылся."; });
+  if (addRose) addRose.addEventListener("click", () => {
+    state.modules.push({ id: `mod-${Date.now()}`, kind: "rose" });
+    update();
+    focusModule(state.modules[state.modules.length - 1].id);
   });
-  get("exceptions-close").addEventListener("click", () => { get("exceptions-panel").hidden = true; });
-  get("exceptions-summary").addEventListener("click", event => {
-    const button = event.target.closest("[data-filter]");
-    if (!button) return;
-    exclusionFilter = exclusionFilter === button.dataset.filter ? "" : button.dataset.filter;
-    paintExceptions();
+  document.addEventListener("click", () => closeParameterMenus());
+  window.addEventListener("scroll", () => closeParameterMenus(), { passive: true });
+  document.querySelector(".work").addEventListener("scroll", () => closeParameterMenus(), { passive: true });
+  const closeHeaderMenus = () => {
+    document.querySelectorAll(".brow-drop").forEach(menu => { menu.hidden = true; });
+    document.querySelectorAll(".brow-link[aria-expanded]").forEach(button => button.setAttribute("aria-expanded", "false"));
+  };
+  document.querySelectorAll(".brow-link[aria-controls]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    const menu = get(button.getAttribute("aria-controls"));
+    const opening = menu.hidden;
+    closeHeaderMenus();
+    menu.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+    closeParameterMenus();
+  }));
+  document.addEventListener("click", () => closeHeaderMenus());
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    const toggle = document.querySelector('.brow-link[aria-expanded="true"], .mod-toggle[aria-expanded="true"]');
+    closeHeaderMenus();
+    closeParameterMenus();
+    if (toggle) toggle.focus();
   });
-  get("chart").addEventListener("pointermove", event => tip(get("chart"), event, "chart-tip", item =>
-    get("chart")._read ? get("chart")._read(item) : `${item.label}\n${text(item.value)}`));
-  get("anomaly").addEventListener("pointermove", event => tip(get("anomaly"), event, "anomaly-tip", item =>
-    `${item.label}\nмесяц ${text(item.value)}\nотклонение ${item.anomaly === null ? "нет" : text(item.anomaly)}`));
-  ["chart", "anomaly"].forEach(id => get(id).addEventListener("pointerleave", () => { get(`${id === "chart" ? "chart" : "anomaly"}-tip`).hidden = true; }));
+  document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => applyPreset(button.dataset.preset)));
+  document.querySelectorAll("[data-window]").forEach(button => button.addEventListener("click", () => {
+    const last = lastIndex();
+    const span = button.dataset.window;
+    editingDates = false;
+    if (span === "all") {
+      state.from = 0;
+      state.to = last;
+    } else {
+      const count = Number(span);
+      state.to = last;
+      state.from = Math.max(0, last - count + 1);
+    }
+    update();
+  }));
   document.addEventListener("click", event => {
     if (event.target.closest && event.target.closest(".menu")) return;
     document.querySelectorAll(".menu-list").forEach(node => { node.hidden = true; });
   });
-  const observer = new ResizeObserver(() => update());
-  observer.observe(get("chart"));
-  observer.observe(get("brush"));
+  let resizeFrame = 0;
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => update());
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    const dockObserver = new ResizeObserver(entries => {
+      entries.forEach(entry => {
+        const property = entry.target.classList.contains("timeline") ? "--timeline-height" : "--header-height";
+        document.documentElement.style.setProperty(property, `${Math.ceil(entry.target.getBoundingClientRect().height)}px`);
+      });
+    });
+    dockObserver.observe(document.querySelector(".timeline"));
+    dockObserver.observe(document.querySelector(".app-header"));
+  }
+  if (document.fonts) document.fonts.ready.then(() => update());
+}
+
+function fitStage() {
+  const stage = document.getElementById("stage");
+  if (!stage) return;
+  const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 900);
+  stage.style.width = "1440px";
+  stage.style.height = "900px";
+  stage.style.position = "absolute";
+  stage.style.transformOrigin = "top left";
+  stage.style.transform = `scale(${scale})`;
+  stage.style.left = `${Math.max(0, (window.innerWidth - 1440 * scale) / 2)}px`;
+  stage.style.top = `${Math.max(0, (window.innerHeight - 900 * scale) / 2)}px`;
 }
 
 fetch("/landing/dashboard/series.json").then(response => response.json()).then(payload => {
   data = payload;
   bootControls();
-  bindMenu(get("view"));
-  bindMenu(get("trend-month"));
+  if (get("view")) bindMenu(get("view"));
+  if (get("trend-month")) bindMenu(get("trend-month"));
   const query = new URLSearchParams(location.search);
   const asked = query.get("station");
   const station = ["ame60", "kr1", "kr2"].includes(asked) ? asked : "ame60";

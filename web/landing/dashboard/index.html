@@ -3,121 +3,98 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#131c1e">
   <title>Архив, урочище Красное</title>
-  <link rel="stylesheet" href="/landing/dashboard/dashboard.css?v=2">
-  <script defer src="/landing/dashboard/dashboard.js?v=2"></script>
-  <script type="module" src="/landing/dashboard/trail.js?v=2"></script>
+  <link rel="stylesheet" href="/landing/dashboard/dashboard.css?v=14">
+  <script defer src="/landing/dashboard/import-data.js?v=13"></script>
+  <script defer src="/landing/dashboard/dashboard.js?v=14"></script>
 </head>
 <body>
-<canvas id="ascii-field" class="cursor-trail" aria-hidden="true"></canvas>
+<div id="stage">
 <div class="shell">
-  <header class="top">
-    <div>
-      <p class="eyebrow">Урочище Красное</p>
-      <h1>Архив наблюдений</h1>
-    </div>
-    <a class="back" href="/landing">главное</a>
+  <a class="skip-link" href="#modules">Перейти к графикам</a>
+  <header class="app-header">
+    <nav class="brow" aria-label="Основная навигация">
+      <a class="brand" href="/landing" aria-label="Метеоархив, главная">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4C10 3 4 7 5 14c1 6 11 7 14-10Z"/><path d="m6 19 9-10M10 15l-1-5M13 12h4"/></svg>
+        <span>Метеоархив</span>
+      </a>
+      <span class="header-divider" aria-hidden="true"></span>
+      <span class="header-context">Урочище Красное</span>
+      <div class="header-actions">
+        <button type="button" id="toggle-impute" class="brow-link impute-toggle" aria-pressed="false" title="Показать восстановленные пропуски для шага Дни">Интерполяция</button>
+        <div class="brow-item">
+          <button type="button" class="brow-link" aria-expanded="false" aria-controls="templates-menu">Шаблоны<svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+          <div class="brow-drop" id="templates-menu" hidden>
+            <span class="menu-caption">Готовые периоды</span>
+            <button type="button" data-preset="ame">Архив АМЕ-60</button>
+            <button type="button" data-preset="pair">Поляна и поле, 2025</button>
+            <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
+          </div>
+        </div>
+        <div class="brow-item">
+          <button type="button" class="brow-link" aria-expanded="false" aria-controls="file-menu">Файл<svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+          <div class="brow-drop" id="file-menu" hidden>
+            <button type="button" id="menu-import">Импорт CSV / JSON</button>
+            <a href="/landing/dashboard/import-example.json" download="meteo-example.json">Пример JSON</a>
+            <span class="menu-caption">Экспорт</span>
+            <button type="button" id="excel">Таблица Excel</button>
+            <button type="button" id="pdf">Графики в PDF</button>
+          </div>
+        </div>
+      </div>
+    </nav>
   </header>
   <div class="work">
-    <div class="maincol">
+    <main class="maincol">
+      <div class="page-heading"><div><h1>Архив наблюдений</h1><p class="page-description">Сравнивайте показатели и собирайте свой дашборд из модулей.</p></div></div>
+      <div class="import-feedback" id="import-feedback" hidden><p id="import-message" role="status" aria-live="polite"></p><button type="button" id="import-dismiss" aria-label="Скрыть сообщение">×</button></div>
       <section class="filters" aria-label="Период и показатель">
+        <div class="section-label"><h2>Данные и период</h2><span>Общие настройки для всех модулей</span></div>
         <div class="station-field">
           <p class="field-label" id="station-label">Станция</p>
           <div class="station-block" id="stations" role="radiogroup" aria-labelledby="station-label"></div>
         </div>
-        <label class="field">Показатель
+        <label class="field metric-field" hidden>
           <select id="metric"></select>
         </label>
-        <label class="field">Вид графика
-          <select id="view">
-            <option value="series">Временной ряд</option>
-            <option value="annual">Годовой ход</option>
-            <option value="dekad">Декады</option>
-            <option value="trend">Тренд одного месяца</option>
-            <option value="compare">Кр1 и Кр2</option>
-          </select>
-        </label>
-        <label class="field" id="trend-month-field" hidden>Месяц
-          <select id="trend-month">
-            <option value="1">Январь</option><option value="2">Февраль</option><option value="3">Март</option>
-            <option value="4">Апрель</option><option value="5">Май</option><option value="6">Июнь</option>
-            <option value="7">Июль</option><option value="8">Август</option><option value="9">Сентябрь</option>
-            <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
-          </select>
-        </label>
         <div class="field step-field">
-          <span class="field-label">Шаг</span>
+          <span class="field-label">Шаг данных</span>
           <div class="segments" role="group" aria-label="Шаг графика">
             <button type="button" data-step="day">Дни</button>
             <button type="button" data-step="month" aria-pressed="true">Месяцы</button>
           </div>
         </div>
-        <label class="field">Дата начала
-          <input id="date-start" type="date">
+        <label class="field date-field">Дата начала
+          <input id="date-start" type="date" aria-describedby="date-start-error">
           <span class="field-error" id="date-start-error" role="alert"></span>
         </label>
-        <label class="field">Дата конца
-          <input id="date-end" type="date">
+        <label class="field date-field">Дата конца
+          <input id="date-end" type="date" aria-describedby="date-end-error">
           <span class="field-error" id="date-end-error" role="alert"></span>
         </label>
         <div class="field apply-field">
-          <span class="field-label">Период</span>
+          <span class="field-label" aria-hidden="true">&nbsp;</span>
           <button type="button" class="apply" id="apply-range">Применить</button>
         </div>
-        <p class="range-note" id="range-note"></p>
+        <p class="range-note" id="range-note" hidden></p>
       </section>
+      <p class="summary-context" id="summary-context"></p>
       <section class="stats" id="stats" aria-label="Сводка периода"></section>
-      <div class="charts" id="charts">
-        <section class="panel" aria-labelledby="main-title">
-          <div class="panel-head">
-            <h2 id="main-title">Температура воздуха</h2>
-            <p class="legend" id="main-legend"></p>
-          </div>
-          <div class="plot">
-            <canvas id="chart"></canvas>
-            <p class="plot-empty" id="chart-empty" hidden></p>
-            <div class="tip" id="chart-tip" hidden></div>
-          </div>
-        </section>
-        <div class="extra">
-          <section class="panel" id="anomaly-panel" aria-labelledby="anomaly-title">
-            <div class="panel-head">
-              <h2 id="anomaly-title">Отклонения</h2>
-              <p class="legend" id="anomaly-legend"></p>
-            </div>
-            <p class="caption" id="anomaly-caption"></p>
-            <div class="plot plot-short">
-              <canvas id="anomaly"></canvas>
-              <p class="plot-empty" id="anomaly-empty" hidden></p>
-              <div class="tip" id="anomaly-tip" hidden></div>
-            </div>
-          </section>
-          <section class="panel" id="rose-panel" hidden>
-            <div class="panel-head"><h2>Роза ветров</h2><p class="legend" id="rose-note"></p></div>
-            <div class="rose-layout">
-              <div class="rose-frame">
-                <svg id="rose" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rose-note"></svg>
-              </div>
-              <ul class="rose-legend" id="rose-legend"></ul>
-            </div>
-            <p class="plot-empty rose-empty" id="rose-empty" hidden></p>
-            <details class="rose-numbers">
-              <summary>Числа по секторам</summary>
-              <div class="table-scroll rose-table-scroll">
-                <table id="rose-table"></table>
-              </div>
-            </details>
-          </section>
-          <section class="panel" id="soil-panel" hidden>
-            <div class="panel-head"><h2>Почва</h2><p class="legend" id="soil-legend"></p></div>
-            <div class="plot plot-short"><canvas id="soil"></canvas></div>
-          </section>
-        </div>
+      <div class="module-bar">
+        <div><h2>Графики</h2></div>
+        <div class="module-actions"><button type="button" id="add-chart"><span aria-hidden="true">＋</span> Добавить график</button><button type="button" id="add-rose"><span aria-hidden="true">＋</span> Роза ветров</button></div>
       </div>
+      <div id="modules" class="modules" tabindex="-1"></div>
       <section class="timeline panel" aria-label="Временная шкала">
         <div class="panel-head">
-          <h2>Временная шкала</h2>
-          <p class="legend" id="window-label"></p>
+          <div class="timeline-heading"><h2>Временная шкала</h2><span id="window-label" class="window-label"></span></div>
+          <div class="window-presets" aria-label="Быстрый выбор периода">
+            <button type="button" data-window="30">30 дней</button>
+            <button type="button" data-window="90">90 дней</button>
+            <button type="button" data-window="365">Год</button>
+            <button type="button" data-window="all">Весь архив</button>
+          </div>
         </div>
         <div class="brush" id="brush">
           <canvas id="overview" aria-hidden="true"></canvas>
@@ -125,7 +102,7 @@
           <input type="range" id="range-start" aria-label="Начало выбранного периода">
           <input type="range" id="range-end" aria-label="Конец выбранного периода">
         </div>
-        <div class="scale-ends"><span id="archive-start"></span><span id="archive-end"></span></div>
+        <div class="scale-ends"><span id="archive-start"></span><span class="timeline-help">Тяните края для выбора периода или середину для сдвига</span><span id="archive-end"></span></div>
       </section>
       <details class="panel table-card" id="table-panel">
         <summary>Таблица периода</summary>
@@ -136,57 +113,12 @@
           </table>
         </div>
       </details>
-    </div>
-    <aside class="tools">
-      <details class="tool-box" open>
-        <summary>Инструменты</summary>
-        <p class="side-label">Готовые периоды</p>
-        <div class="presets">
-          <button type="button" data-preset="ame">Архив АМЕ-60</button>
-          <button type="button" data-preset="pair">Поляна и поле, 2025</button>
-          <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
-        </div>
-        <p class="side-label">Шаблоны анализа</p>
-        <div class="presets" id="templates">
-          <button type="button" data-template="pair">Поляна и поле, температура</button>
-          <button type="button" data-template="soil">Воздух и почва по глубинам</button>
-          <button type="button" data-template="temprh">Температура и влажность</button>
-          <button type="button" data-template="pressure">Давление и качество</button>
-          <button type="button" data-template="wind">Ветровой режим</button>
-        </div>
-        <p class="side-label">Линия на графике</p>
-        <label class="field">Значение <input type="number" id="line-value" step="any" placeholder="0"></label>
-        <label class="field">Подпись <input type="text" id="line-label" placeholder="0 °C"></label>
-        <button type="button" class="excel" id="excel">Выгрузка в Excel (.xlsx)</button>
-        <button type="button" class="excel" id="exceptions">Журнал исключений</button>
-        <p class="side-label">Разбор</p>
-        <fieldset class="checks">
-          <label><input type="checkbox" id="opt-ma" checked><span>Скользящее среднее</span><i class="swatch" style="background:#E4C98A"></i></label>
-          <label><input type="checkbox" id="opt-band" checked><span>Полоса 10-90%</span><i class="swatch" style="background:#BCED91"></i></label>
-          <label><input type="checkbox" id="opt-anomaly" checked><span>Отклонения</span><i class="swatch" style="background:#E0A090"></i></label>
-          <label><input type="checkbox" id="opt-rose"><span>Роза ветров</span><i class="swatch" style="background:#8FB4A4"></i></label>
-          <label><input type="checkbox" id="opt-soil"><span>Профиль почвы</span><i class="swatch" style="background:#7EAA98"></i></label>
-        </fieldset>
-        <p class="side-note" id="side-note"></p>
-      </details>
-    </aside>
+    </main>
+    <p class="side-note" id="side-note" hidden></p>
   </div>
 </div>
-<div class="journal" id="exceptions-panel" hidden>
-  <div class="journal-card" role="dialog" aria-labelledby="exceptions-title">
-    <header class="panel-head">
-      <h2 id="exceptions-title">Журнал исключений</h2>
-      <button type="button" id="exceptions-close">Закрыть</button>
-    </header>
-    <p class="legend">Полный журнал: каждое значение или строка, выпавшие из расчёта, с файлом и номером строки. Фильтр по причине сверху.</p>
-    <div class="journal-summary" id="exceptions-summary"></div>
-    <div class="journal-scroll">
-      <table>
-        <thead><tr><th>Станция</th><th>Срок</th><th>Что</th><th>Значение</th><th>Почему исключено</th><th>Файл:строка</th></tr></thead>
-        <tbody id="exceptions-rows"></tbody>
-      </table>
-    </div>
-  </div>
 </div>
+<p id="module-status" class="sr-only" role="status" aria-live="polite"></p>
+<input id="import-file" type="file" accept=".csv,.json,text/csv,application/json" hidden>
 </body>
 </html>

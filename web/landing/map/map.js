@@ -4,7 +4,6 @@
    Числа берутся из wind.json (meteo.engine.daily_statistics). */
 
 const COMPASS = ["север", "северо-восток", "восток", "юго-восток", "юг", "юго-запад", "запад", "северо-запад"];
-const PER_STATION = 18;
 const PIN = `<svg viewBox="0 0 36 44" aria-hidden="true"><path class="pin-body" d="M18 42 C18 42 5 25 5 16 A13 13 0 1 1 31 16 C31 25 18 42 18 42 Z"/><circle class="pin-well" cx="18" cy="15" r="4.2"/><path class="pin-vane" d="M18 15 V9 M14.4 11.4 H21.6"/></svg>`;
 
 const canvas = document.getElementById("map");
@@ -32,6 +31,7 @@ let view = { minX: 0, minY: 0, maxX: 1, maxY: 1, pad: 28 };
 let cam = { lon: 32.9, lat: 56.49, zoom: 1 };
 let camera = { x: 0, y: 0, scale: 1 };
 let specks = {};
+let gust = 0;
 let markers = {};
 let markersDirty = true;
 let openId = "";
@@ -269,7 +269,7 @@ function flowVector(rec) {
 }
 
 function zoneRadius() {
-  return Math.max(48, Math.min(150, 36 + cam.zoom * 14));
+  return Math.max(32, Math.min(64, 26 + cam.zoom * 3.2));
 }
 
 function speedColor(speed) {
@@ -409,52 +409,70 @@ function setDate(iso) {
 }
 
 function resetSpecks() {
-  const count = PER_STATION;
   stations.forEach((site) => {
     const rec = recordFor(site, selected);
     if (!motion || document.hidden || !rec || rec.flow !== "vector") {
       specks[site.id] = [];
       return;
     }
-    const radius = zoneRadius() * 0.82;
-    specks[site.id] = Array.from({ length: count }, () => ({
-      along: (Math.random() * 2 - 1) * radius,
-      across: (Math.random() * 2 - 1) * radius * 0.75,
+    const radius = zoneRadius();
+    specks[site.id] = Array.from({ length: 8 }, (_, index) => ({
+      along: ((index % 4) - 1.5) * radius * 0.42,
+      across: ((index % 3) - 1) * radius * 0.22,
+      span: 0.75 + (index % 3) * 0.12,
+      bulk: 2.2,
     }));
   });
 }
 
 function updateSpecks(dt) {
+  gust = (gust + dt * 0.42) % 1;
   const radius = zoneRadius();
   stations.forEach((site) => {
     const rec = recordFor(site, selected);
     const list = specks[site.id];
     if (!rec || rec.flow !== "vector" || !list || !list.length) return;
     const t = Math.max(0, Math.min(1, rec.speed / scaleMax));
-    const step = (8 + 34 * t) * dt;
+    const step = (18 + 70 * t) * dt;
     list.forEach((speck) => {
-      speck.along += step;
-      const limit = radius * radius - speck.across * speck.across;
-      if (speck.along * speck.along > limit) {
+      speck.along += step * speck.span;
+      const limit = radius * radius - speck.across * speck.across * 0.8;
+      if (speck.along * speck.along > Math.max(0, limit)) {
         speck.along = -Math.sqrt(Math.max(0, limit));
       }
     });
   });
 }
 
-function drawArrow(ctx, x, y, ux, uy, len) {
+function paintStreak(ctx, x, y, ux, uy, len, half) {
+  const px = -uy * half;
+  const py = ux * half;
   ctx.beginPath();
-  ctx.moveTo(x - ux * len, y - uy * len);
-  ctx.lineTo(x + ux * len * 0.45, y + uy * len * 0.45);
-  ctx.stroke();
-  const hx = x + ux * len * 0.45;
-  const hy = y + uy * len * 0.45;
-  ctx.beginPath();
-  ctx.moveTo(hx, hy);
-  ctx.lineTo(hx - ux * 5 - uy * 3.2, hy - uy * 5 + ux * 3.2);
-  ctx.moveTo(hx, hy);
-  ctx.lineTo(hx - ux * 5 + uy * 3.2, hy - uy * 5 - ux * 3.2);
-  ctx.stroke();
+  ctx.moveTo(x + ux * 4, y + uy * 4);
+  ctx.lineTo(x - ux * len + px, y - uy * len + py);
+  ctx.lineTo(x - ux * len - px, y - uy * len - py);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGustFronts(ctx, origin, vector, radius, speedT) {
+  const angle = Math.atan2(vector.y, vector.x);
+  ctx.save();
+  ctx.translate(origin.x, origin.y);
+  ctx.rotate(angle);
+  ctx.strokeStyle = speedColor(speedT * scaleMax);
+  ctx.lineWidth = 1.6;
+  for (let wave = 0; wave < 2; wave += 1) {
+    const shift = motion ? (gust * (0.7 + speedT * 0.5) + wave / 2) % 1 : 0.28 + wave * 0.34;
+    const x = (shift - 0.42) * radius * 2.05;
+    const bow = 8 + shift * radius * 0.34;
+    ctx.globalAlpha = Math.max(0, 0.15 + (1 - Math.abs(shift - 0.55) * 1.5) * (0.45 + speedT * 0.4));
+    ctx.beginPath();
+    ctx.arc(x, 0, bow, -1.05, 1.05);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 function drawFlows(ctx) {
@@ -464,27 +482,32 @@ function drawFlows(ctx) {
     const vector = flowVector(rec);
     if (!vector) return;
     const origin = project(site.lon, site.lat);
-    const t = Math.max(0, Math.min(1, rec.speed / scaleMax));
-    const len = 16 + 28 * t;
-    ctx.strokeStyle = speedColor(rec.speed);
-    ctx.lineWidth = 1.8;
-    ctx.globalAlpha = 0.82;
-    if (!motion) {
-      for (let i = 0; i < 7; i += 1) {
-        const shift = (i - 3) * 11;
-        drawArrow(ctx, origin.x - vector.y * shift, origin.y + vector.x * shift, vector.x, vector.y, len);
-      }
-    } else {
-      (specks[site.id] || []).forEach((speck) => {
-        const x = origin.x + vector.x * speck.along - vector.y * speck.across;
-        const y = origin.y + vector.y * speck.along + vector.x * speck.across;
-        if ((x - origin.x) ** 2 + (y - origin.y) ** 2 > radius * radius) return;
-        ctx.beginPath();
-        ctx.moveTo(x - vector.x * len * 0.85, y - vector.y * len * 0.85);
-        ctx.lineTo(x + vector.x * 6, y + vector.y * 6);
-        ctx.stroke();
-      });
-    }
+    const t = Math.max(0.18, Math.min(1, rec.speed / scaleMax));
+    ctx.fillStyle = speedColor(rec.speed);
+    ctx.globalAlpha = 0.07;
+    ctx.beginPath();
+    ctx.ellipse(origin.x, origin.y, radius * 0.95, radius * 0.62, Math.atan2(vector.y, vector.x), 0, Math.PI * 2);
+    ctx.fill();
+    drawGustFronts(ctx, origin, vector, radius, t);
+    ctx.fillStyle = speedColor(rec.speed);
+    const streaks = motion ? (specks[site.id] || []) : Array.from({ length: 6 }, (_, index) => ({
+      along: (index - 2.5) * radius * 0.22,
+      across: ((index % 2) - 0.5) * radius * 0.28,
+      span: 0.9,
+      bulk: 2.4,
+    }));
+    streaks.forEach((speck) => {
+      const x = origin.x + vector.x * speck.along - vector.y * speck.across;
+      const y = origin.y + vector.y * speck.along + vector.x * speck.across;
+      if ((x - origin.x) ** 2 + (y - origin.y) ** 2 > radius * radius) return;
+      const len = (12 + 26 * t) * (speck.span || 1);
+      ctx.globalAlpha = 0.78;
+      paintStreak(ctx, x, y, vector.x, vector.y, len, speck.bulk || 2.6);
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.arc(x + vector.x * 3, y + vector.y * 3, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.globalAlpha = 1;
   });
 }
@@ -499,16 +522,120 @@ function traceRing(ctx) {
   ctx.closePath();
 }
 
-const TILES = ["#12362c", "#1f5a40", "#3e7a52", "#163e38", "#2a6848", "#0e2c24", "#4c8a5e", "#245848"];
+const FACETS = [
+  ["#10261e", "#163028", "#1c3a2c"],
+  ["#1a4a34", "#226044", "#2c6a4a"],
+  ["#3c784c", "#4a8858", "#5a9864"],
+  ["#12383a", "#1a4848", "#245656"],
+  ["#2a5438", "#346444", "#3e744e"],
+];
 let landCanvas = null;
 let landKey = "";
+let mesh = null;
 
-function tileColor(ix, iy) {
-  const n = Math.abs((ix * 17 + iy * 31) * 13 + ix * iy);
-  return TILES[n % TILES.length];
+function unitRand(n) {
+  const value = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function circumcircle(a, b, c) {
+  const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+  if (Math.abs(d) < 1e-14) return null;
+  const a2 = a.x * a.x + a.y * a.y;
+  const b2 = b.x * b.x + b.y * b.y;
+  const c2 = c.x * c.x + c.y * c.y;
+  return {
+    x: (a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d,
+    y: (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d,
+  };
+}
+
+function delaunay(points) {
+  const vs = points.map((point) => ({ x: point[0], y: point[1] }));
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  vs.forEach((point) => {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  });
+  const span = Math.max(maxX - minX, maxY - minY) || 1;
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+  const base = vs.length;
+  vs.push(
+    { x: midX - span * 6, y: midY - span * 4 },
+    { x: midX, y: midY + span * 10 },
+    { x: midX + span * 6, y: midY - span * 4 }
+  );
+  const tris = [{ i: base, j: base + 1, k: base + 2 }];
+  function insideCircle(tri, point) {
+    const center = circumcircle(vs[tri.i], vs[tri.j], vs[tri.k]);
+    if (!center) return false;
+    const reach = (vs[tri.i].x - center.x) ** 2 + (vs[tri.i].y - center.y) ** 2;
+    return (point.x - center.x) ** 2 + (point.y - center.y) ** 2 <= reach * 1.000001;
+  }
+  for (let index = 0; index < base; index += 1) {
+    const point = vs[index];
+    const cavity = [];
+    const keep = [];
+    tris.forEach((tri) => (insideCircle(tri, point) ? cavity : keep).push(tri));
+    const edges = [];
+    cavity.forEach((tri) => {
+      [[tri.i, tri.j], [tri.j, tri.k], [tri.k, tri.i]].forEach((edge) => {
+        const twin = edges.findIndex((item) => (item[0] === edge[1] && item[1] === edge[0]));
+        if (twin >= 0) edges.splice(twin, 1);
+        else edges.push(edge);
+      });
+    });
+    tris.length = 0;
+    keep.forEach((tri) => tris.push(tri));
+    edges.forEach((edge) => tris.push({ i: edge[0], j: edge[1], k: index }));
+  }
+  return tris
+    .filter((tri) => tri.i < base && tri.j < base && tri.k < base)
+    .map((tri) => [points[tri.i], points[tri.j], points[tri.k]]);
+}
+
+function buildMesh() {
+  const step = 0.017;
+  const points = [];
+  ring.forEach((point, index) => {
+    if (index % 3 === 0) points.push(point);
+  });
+  let row = 0;
+  for (let lat = view.minY - step; lat <= view.maxY + step; lat += step * 0.82) {
+    const slide = (row % 2) * step * 0.5;
+    let col = 0;
+    for (let lon = view.minX - step; lon <= view.maxX + step; lon += step) {
+      const jx = (unitRand(row * 80 + col) - 0.5) * step * 0.7;
+      const jy = (unitRand(row * 80 + col + 19) - 0.5) * step * 0.7;
+      const point = [lon + slide + jx, lat + jy];
+      if (inside(point[0], point[1])) points.push(point);
+      col += 1;
+    }
+    row += 1;
+  }
+  return delaunay(points).filter((tri) => {
+    const lon = (tri[0][0] + tri[1][0] + tri[2][0]) / 3;
+    const lat = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+    return inside(lon, lat);
+  });
+}
+
+function facetFill(lon, lat) {
+  const hill = Math.sin(lon * 36.4 + 0.6) * 0.55 + Math.cos(lat * 48.2) * 0.45;
+  const band = Math.max(0, Math.min(FACETS.length - 1, Math.floor(((hill + 1) / 2) * FACETS.length)));
+  const family = FACETS[band];
+  const pick = Math.abs(Math.sin(lon * 97 + lat * 63));
+  return family[Math.floor(pick * family.length) % family.length];
 }
 
 function drawTerrain(ctx) {
+  if (!mesh) mesh = buildMesh();
   const key = `${Math.round(width())}x${Math.round(height())}|${cam.zoom.toFixed(3)}|${cam.lon.toFixed(4)}|${cam.lat.toFixed(4)}`;
   if (!landCanvas || landKey !== key) {
     landKey = key;
@@ -516,34 +643,20 @@ function drawTerrain(ctx) {
     landCanvas.width = Math.max(2, Math.round(width()));
     landCanvas.height = Math.max(2, Math.round(height()));
     const paper = landCanvas.getContext("2d");
-    const step = 0.011;
-    const ix0 = Math.floor(view.minX / step);
-    const ix1 = Math.ceil(view.maxX / step);
-    const iy0 = Math.floor(view.minY / step);
-    const iy1 = Math.ceil(view.maxY / step);
-    for (let ix = ix0; ix <= ix1; ix += 1) {
-      for (let iy = iy0; iy <= iy1; iy += 1) {
-        const lon = ix * step;
-        const lat = iy * step;
-        const corners = [[lon, lat], [lon + step, lat], [lon + step, lat + step], [lon, lat + step]];
-        const midLon = lon + step * 0.5;
-        const midLat = lat + step * 0.5;
-        const touched = inside(midLon, midLat) || corners.some((point) => inside(point[0], point[1]));
-        if (!touched) continue;
-        paper.beginPath();
-        corners.forEach((point, index) => {
-          const spot = project(point[0], point[1]);
-          if (index) paper.lineTo(spot.x, spot.y);
-          else paper.moveTo(spot.x, spot.y);
-        });
-        paper.closePath();
-        paper.fillStyle = tileColor(ix, iy);
-        paper.fill();
-        paper.strokeStyle = "rgba(216, 232, 196, 0.42)";
-        paper.lineWidth = 1;
-        paper.stroke();
-      }
-    }
+    paper.lineJoin = "round";
+    mesh.forEach((tri) => {
+      const spots = tri.map((point) => project(point[0], point[1]));
+      const lon = (tri[0][0] + tri[1][0] + tri[2][0]) / 3;
+      const lat = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+      paper.beginPath();
+      spots.forEach((spot, index) => (index ? paper.lineTo(spot.x, spot.y) : paper.moveTo(spot.x, spot.y)));
+      paper.closePath();
+      paper.fillStyle = facetFill(lon, lat);
+      paper.fill();
+      paper.strokeStyle = "rgba(8, 18, 14, 0.45)";
+      paper.lineWidth = 0.8;
+      paper.stroke();
+    });
   }
   ctx.drawImage(landCanvas, 0, 0, width(), height());
 }
