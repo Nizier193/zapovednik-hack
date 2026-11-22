@@ -4,4 +4,7 @@
 .pytest_cache
 __pycache__
 logs
-docs
+docs/*
+!docs/methodology.md
+!docs/validation.md
+weather-store/

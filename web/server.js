@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const root = __dirname;
+const weatherBackend = new URL(process.env.METEO_BACKEND_URL || 'http://backend:8080');
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -36,11 +37,31 @@ function inside(file, base) {
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
+function proxyWeather(req, res) {
+  const headers = { ...req.headers, host: weatherBackend.host };
+  const upstream = http.request(weatherBackend, {
+    method: req.method,
+    path: req.url,
+    headers,
+  }, response => {
+    res.writeHead(response.statusCode, response.headers);
+    response.pipe(res);
+  });
+  upstream.on('error', () => {
+    if (res.headersSent) { res.destroy(); return; }
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ detail: 'Сервис метеоархива недоступен.' }));
+  });
+  req.on('aborted', () => upstream.destroy());
+  req.pipe(upstream);
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   const pathname = decodeURIComponent(url.pathname);
+  if (pathname.startsWith('/api/weather/')) { proxyWeather(req, res); return; }
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
-    res.writeHead(302, { Location: "/landing/dashboard" });
+    res.writeHead(302, { Location: "/archive" });
     res.end();
     return;
   }
@@ -48,6 +69,7 @@ const server = http.createServer((req, res) => {
   if (rel === "/") rel = "/index.html";
   if (rel === "/landing" || rel === "/landing/") rel = "/landing/index.html";
   if (rel === "/landing/dashboard" || rel === "/landing/dashboard/") rel = "/landing/dashboard/index.html";
+  if (rel === "/archive" || rel === "/archive/") rel = "/archive/index.html";
   const file = path.normalize(path.join(root, rel));
   if (!inside(file, root)) {
     res.writeHead(403);
@@ -57,6 +79,7 @@ const server = http.createServer((req, res) => {
   send(res, file);
 });
 
-server.listen(8501, "0.0.0.0", () => {
-  console.log("web listening on 8501");
+const port = Number(process.env.WEB_PORT || 8501);
+server.listen(port, process.env.WEB_HOST || '0.0.0.0', () => {
+  console.log(`web listening on ${port}`);
 });

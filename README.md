@@ -1,4 +1,32 @@
-# Базовая структура для сервиса
+# Метеоархив заповедника
+
+Метеоархив находится на `/archive`. Он использует действующие FastAPI и веб-сервис репозитория. Наблюдения и исходные файлы хранятся в отдельной базе SQLite, в Docker её хранит том `weather_data`. Дашборды и их настройки сохраняются в браузере и переносятся файлом JSON.
+
+## Запуск метеоархива без Docker
+
+Из корня репозитория, с Python 3.12:
+
+```bash
+python -m pip install -r backend/requirements-meteo.txt
+python backend/meteo_local.py --import "<путь к meteo_hack_dataset.zip>"
+```
+
+Откройте `http://127.0.0.1:8765/archive/`. Команда `python backend/meteo_local.py` повторно открывает сохранённую базу. Для отдельной рабочей базы задайте `METEO_DB`. В браузере первичный ZIP и последующие CSV можно загрузить в разделе «Данные и импорт».
+
+## Запуск в существующем CI/CD
+
+`master` использует действующий `ci-cd_master-lite.yml`. Compose поднимает API метеоархива в `backend`, а веб-сервис пересылает запросы `/api/weather/` внутрь сети Compose. Исходный ZIP передаётся оператором при первом импорте. Чтобы дать сотрудникам возможность загрузки через серверный интерфейс, задайте `METEO_IMPORT_TOKEN` в серверном `.env` и перезапустите backend. Значение хранится на сервере. Локальный запуск на `127.0.0.1` доступен без ключа.
+
+Для первичной загрузки из администрируемого терминала сервера:
+
+```bash
+docker compose cp ./meteo_hack_dataset.zip backend:/tmp/meteo_hack_dataset.zip
+docker compose exec backend python meteo_local.py --import /tmp/meteo_hack_dataset.zip --import-only
+```
+
+[Методика](docs/methodology.md) · [Контрольные примеры и сценарий демонстрации](docs/validation.md)
+
+## Базовая структура сервиса
 
 Шаблон в базовой комплектации с:
 

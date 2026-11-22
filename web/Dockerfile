@@ -8,6 +8,7 @@ COPY assets ./assets
 COPY landing/index.html landing/landing.css landing/landing.js landing/NOTICE.txt ./landing/
 COPY landing/vendor ./landing/vendor
 COPY landing/dashboard ./landing/dashboard
+COPY archive ./archive
 
 EXPOSE 8501
 

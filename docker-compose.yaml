@@ -14,10 +14,13 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      METEO_DB: /weather/observations.sqlite3
     networks:
       - app-network
     volumes:
       - ./backend/app:/app/app
+      - weather_data:/weather
     depends_on:
       - postgres
       - redis
@@ -52,3 +55,4 @@ networks:
 
 volumes:
   postgres_data:
+  weather_data:
