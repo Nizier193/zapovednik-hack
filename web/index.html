@@ -3,210 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Полевой журнал. Красное</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Взорвать</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #07080c; }
+    body { display: grid; place-items: center; overflow: hidden; }
+    button {
+      width: min(92vw, 920px);
+      height: min(64vh, 420px);
+      border: 0;
+      background: #e23b32;
+      color: #fff;
+      font: 700 clamp(48px, 10vw, 120px)/1 Impact, Haettenschweiler, "Arial Narrow", sans-serif;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+    }
+    button:hover { background: #ff5346; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  </style>
 </head>
 <body>
-  <div class="page">
-    <aside class="rail" aria-hidden="true">
-      <svg viewBox="0 0 160 190">
-        <path d="M80 18 L142 150 H18 Z" fill="#bced91" opacity="0.35"/>
-        <path d="M80 78 L142 150 H18 Z" fill="#24382e"/>
-        <path d="M80 8 L152 162 H8 Z" fill="none" stroke="#acc0b0" stroke-width="1.4"/>
-      </svg>
-      <svg viewBox="0 0 160 160">
-        <circle cx="80" cy="80" r="58" fill="none" stroke="#acc0b0" stroke-width="1.4"/>
-        <circle cx="80" cy="80" r="36" fill="none" stroke="#bced91" stroke-width="1.4"/>
-        <circle cx="80" cy="80" r="16" fill="none" stroke="#3e5549" stroke-width="1.4"/>
-      </svg>
-      <svg viewBox="0 0 180 110">
-        <ellipse cx="90" cy="58" rx="72" ry="28" fill="none" stroke="#acc0b0" stroke-width="1.3"/>
-        <ellipse cx="90" cy="64" rx="52" ry="20" fill="none" stroke="#acc0b0" stroke-width="1.3"/>
-        <ellipse cx="90" cy="70" rx="32" ry="12" fill="none" stroke="#bced91" stroke-width="1.3"/>
-      </svg>
-      <svg viewBox="0 0 120 150">
-        <path d="M60 12 L88 52 H32 Z" fill="none" stroke="#bced91" stroke-width="1.5"/>
-        <path d="M60 36 L96 84 H24 Z" fill="none" stroke="#bced91" stroke-width="1.5"/>
-        <path d="M60 62 L104 118 H16 Z" fill="none" stroke="#bced91" stroke-width="1.5"/>
-        <path d="M60 118 V140" fill="none" stroke="#bced91" stroke-width="1.5"/>
-      </svg>
-    </aside>
-  <div class="desk">
-    <header class="mast">
-      <img class="mark" src="assets/cu-mark.png?v=2" alt="ЦУ" width="132" height="96">
-      <div class="mast-copy">
-        <p class="where">Центрально-Лесной заповедник, урочище Красное</p>
-        <h1>Полевой журнал</h1>
-        <nav class="sheets" aria-label="Разделы журнала">
-          <button type="button" data-sheet="journal" aria-pressed="true">Журнал</button>
-          <button type="button" data-sheet="compare" aria-pressed="false">Поляна и поле</button>
-          <button type="button" data-sheet="pressure" aria-pressed="false">Давление</button>
-          <button type="button" data-sheet="forecast" aria-pressed="false">Прогноз</button>
-          <button type="button" data-sheet="upload" aria-pressed="false">Новый файл</button>
-        </nav>
-      </div>
-      <img class="spruce" src="assets/spruce-tip.png" alt="">
-    </header>
-
-    <section class="sheet" id="journal" aria-label="Журнал станции">
-      <form class="instrument" id="instrument">
-        <label>Станция
-          <select name="station" id="station"></select>
-        </label>
-        <label>Параметр
-          <select name="parameter" id="parameter"></select>
-        </label>
-        <label>С
-          <input type="date" name="from" id="from">
-        </label>
-        <label>По
-          <input type="date" name="to" id="to">
-        </label>
-        <button type="submit">Показать</button>
-      </form>
-      <div class="spread">
-        <div class="reading" id="reading">
-          <p class="reading-title" id="reading-title"></p>
-          <p class="refusal" id="refusal" hidden></p>
-          <table id="daybook">
-            <thead>
-              <tr>
-                <th>Дата</th>
-                <th>Сроков</th>
-                <th>Среднее</th>
-                <th>Заметка</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="4" id="empty-note"></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="plot-well" aria-hidden="true">
-            <img src="assets/contour-lines.png" alt="">
-            <p>График валидных суток появится здесь, когда CSV ляжет на диск. Числа заранее не рисуем.</p>
-          </div>
-        </div>
-        <aside class="margin" id="margin"></aside>
-      </div>
-    </section>
-
-    <section class="sheet" id="compare" hidden aria-label="Поляна и поле за 2025">
-      <h2>Поляна и поле, 2025</h2>
-      <p class="lead">Две площадки Сокола за один год. Кр1 минус Кр2 по температуре воздуха. Это не новая станция и не продолжение АМЕ-60.</p>
-      <div class="spread">
-        <div class="reading">
-          <table>
-            <thead>
-              <tr>
-                <th>Месяц 2025</th>
-                <th>Кр1, поляна</th>
-                <th>Кр2, поле</th>
-                <th>Разница</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="4">Месячные средние посчитаем из файлов Кр1 и Кр2. Пока ряд на сервис не загружен, ячейки пустые, а не нули.</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="lead">Второй лист этого раздела: средний суточный ход, две линии, час из исходной метки времени.</p>
-        </div>
-        <aside class="margin">
-          <p class="where">Как читать</p>
-          <p>Пустой месяц остаётся пустым. Если у одной площадки месяц не прошёл правило полноты, разницу за этот месяц не ставим.</p>
-        </aside>
-      </div>
-    </section>
-
-    <section class="sheet" id="pressure" hidden aria-label="Давление Сокола">
-      <h2>Давление Сокола</h2>
-      <p class="lead">Только Кр1 и Кр2, колонка pressure_hpa. У АМЕ-60 давления нет. У Кр1 за 2024 в месячное давление не входит апрель: 1362 значения вне 940-1050 гПа, по годным часам 334 суток и 11 месяцев. На температуру апреля этот запрет не переносится.</p>
-      <form class="instrument" id="pressure-form">
-        <label>Площадка
-          <select id="pressure-station">
-            <option value="kr1">Кр1, поляна</option>
-            <option value="kr2">Кр2, поле</option>
-          </select>
-        </label>
-        <label>Год
-          <select id="pressure-year">
-            <option>2022</option>
-            <option>2023</option>
-            <option>2024</option>
-            <option selected>2025</option>
-          </select>
-        </label>
-      </form>
-      <p id="pressure-note" class="lead"></p>
-    </section>
-
-    <section class="sheet" id="forecast" hidden aria-label="Внешний прогноз">
-      <h2>Прогноз на ближайшие сутки</h2>
-      <div class="split-quiet">
-        <div>
-          <p class="where">Последние наблюдения</p>
-          <p>Здесь будет дата последних валидных суток Сокола. Сейчас файла на диске нет, поэтому дата не подставлена.</p>
-        </div>
-        <div class="forecast-pane">
-          <p class="where">Внешний сервис</p>
-          <p>Свою модель не строим. Прогноз запрашивается отдельно и в архив не пишется. Сервис ещё не подключён, координату урочища нужно подтвердить.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="sheet" id="upload" hidden aria-label="Новый файл">
-      <h2>Новый файл того же формата</h2>
-      <p class="lead">CSV с колонкой datetime и параметрами станции. Время не переводим и не округляем. Чужой набор колонок в ряд не кладём.</p>
-      <form class="instrument" id="upload-form">
-        <label>Куда отнести
-          <select id="upload-station">
-            <option value="ame">АМЕ-60</option>
-            <option value="kr1">Сокол, Кр1</option>
-            <option value="kr2">Сокол, Кр2</option>
-          </select>
-        </label>
-        <label class="file-pick">Файл
-          <span class="file-row">
-            <input type="file" id="upload-file" accept=".csv,text/csv">
-            <span class="file-btn">Выбрать CSV</span>
-            <span class="file-name" id="upload-name">не выбран</span>
-          </span>
-        </label>
-      </form>
-      <p id="upload-report" class="lead">Файл ещё не выбран. На этом шаге проверяется только шапка, на диск сервис его не пишет.</p>
-    </section>
-
-    <footer class="forest-floor" aria-hidden="true"></footer>
-  </div>
-    <aside class="rail rail-right">
-      <svg viewBox="0 0 180 180" aria-hidden="true">
-        <rect x="14" y="14" width="152" height="152" fill="#192d25" stroke="#3e5549"/>
-        <rect x="32" y="32" width="56" height="56" fill="#24382e"/>
-        <rect x="32" y="32" width="28" height="28" fill="#14241c"/>
-        <rect x="60" y="60" width="28" height="28" fill="#14241c"/>
-        <circle cx="138" cy="40" r="12" fill="#bced91"/>
-        <path d="M124 118 l18 28 h-36 z" fill="#bced91" opacity="0.8"/>
-      </svg>
-      <svg viewBox="0 0 160 160" aria-hidden="true">
-        <circle cx="80" cy="80" r="62" fill="none" stroke="#acc0b0" stroke-width="1.4"/>
-        <circle cx="80" cy="80" r="38" fill="none" stroke="#acc0b0" stroke-width="1.4"/>
-        <path d="M80 14 V146 M14 80 H146" fill="none" stroke="#acc0b0" stroke-width="1.2"/>
-        <path d="M80 46 L92 80 L80 114 L68 80 Z" fill="#bced91"/>
-      </svg>
-      <svg viewBox="0 0 180 48" aria-hidden="true">
-        <path d="M16 8 l16 28 h-32 z" fill="#bced91"/>
-        <circle cx="90" cy="24" r="14" fill="#3e5549"/>
-        <rect x="140" y="8" width="28" height="28" fill="none" stroke="#acc0b0" stroke-width="1.4"/>
-      </svg>
-      <figure class="crew">
-        <figcaption>лучший дрим-тим: Название_команды_не_забыть_изменить</figcaption>
-        <img src="assets/crew.jpg" alt="Команда: четверо с плюшевыми тюленями">
-      </figure>
-    </aside>
-  </div>
-  <script src="app.js"></script>
+  <button type="button" id="boom">ВЗОРВАТЬ</button>
+  <canvas id="dust"></canvas>
+  <script>
+    const button = document.getElementById("boom");
+    const canvas = document.getElementById("dust");
+    const ctx = canvas.getContext("2d");
+    button.addEventListener("click", () => {
+      const box = button.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      button.remove();
+      const bits = Array.from({ length: 90 }, () => ({
+        x, y,
+        vx: (Math.random() - 0.5) * 28,
+        vy: (Math.random() - 0.7) * 24,
+        r: 6 + Math.random() * 18,
+        color: Math.random() > 0.35 ? "#e23b32" : "#f6d7a8"
+      }));
+      const paint = () => {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        bits.forEach(bit => {
+          bit.x += bit.vx;
+          bit.y += bit.vy;
+          bit.vy += 0.35;
+          ctx.fillStyle = bit.color;
+          ctx.fillRect(bit.x, bit.y, bit.r, bit.r);
+        });
+        if (bits.some(bit => bit.y < innerHeight + 40)) requestAnimationFrame(paint);
+      };
+      paint();
+    });
+  </script>
 </body>
 </html>
