@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="586" viewBox="0 0 1440 586"><rect width="1440" height="586" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Ловушки</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">На них теряют основную задачу</text>
+<rect x="48" y="100" width="1344" height="36" fill="#244031"/>
+<text x="58" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Неверно</text>
+<text x="730" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Верно</text>
+<rect x="48" y="136" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Один график с 2015 по 2024</text>
+<text x="730" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">АМЕ-60 кончается в 2021, Сокол начинается в 2022</text>
+<rect x="48" y="174" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Среднее Кр1 и Кр2 как один Сокол</text>
+<text x="730" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Поляна и поле - два ряда. Сравнение 2025 - отдельный экран разности</text>
+<rect x="48" y="212" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="234" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">У Сокола требовать 48 получасов</text>
+<text x="730" y="234" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Всегда 18 разных часов, и на шаге 60, и на шаге 30, и на смеси 2025</text>
+<rect x="48" y="250" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="272" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Две записи часа 10 дают два часа к порогу</text>
+<text x="730" y="272" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Для полноты это один час. В суточное среднее входят оба годных значения</text>
+<rect x="48" y="288" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="310" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Месяц с пятью неполными сутками подряд ещё годен</text>
+<text x="730" y="310" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Серия из 5 и более закрывает месяц, даже если всего неполных десять или меньше</text>
+<rect x="48" y="326" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="348" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Давление Кр1 2024 закрыто как 363 из 366</text>
+<text x="730" y="348" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1362 значения вне 940-1050 гПа не входят. По годным часам: 334 суток, 11 месяцев,</text>
+<text x="730" y="370" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">апреля нет</text>
+<rect x="48" y="386" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="408" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Из-за апреля давления закрыт весь апрель Кр1</text>
+<text x="730" y="408" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Запрет только у месячного давления. Температура апреля жива</text>
+<rect x="48" y="424" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="446" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Роза 2021, потому что в колонке есть градусы</text>
+<text x="730" y="446" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Весь wind_dir 2021 недостоверен. Розы нет. Температуру 2021 это не удаляет</text>
+<rect x="48" y="462" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="484" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Пропуск 1999-2003 заполнен и вошёл в число лет</text>
+<text x="730" y="484" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Записей нет, точки тренда нет, год входит в N только с пригодным месяцем</text>
+<rect x="48" y="500" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="522" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Флаги soil_05 за 2016-2017 обнуляют soil_10</text>
+<text x="730" y="522" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Флаг снимает только soil_05. 2016 остаётся годом с 12 месяцами на уровне станции</text></svg>

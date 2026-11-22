@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="548" viewBox="0 0 1440 548"><rect width="1440" height="548" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Приборы</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Что умеет каждый ряд</text>
+<rect x="48" y="100" width="1392" height="36" fill="#244031"/>
+<text x="58" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13"></text>
+<text x="238" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">АМЕ-60</text>
+<text x="618" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Кр1, поляна</text>
+<text x="1060" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Кр2, поле</text>
+<rect x="48" y="136" width="1392" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Годы</text>
+<text x="238" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1 июля 1992 - 2021</text>
+<text x="618" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2022-2025, в 2023 только по 26 апреля</text>
+<text x="1060" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2022-2025, в 2023 около 25 суток</text>
+<rect x="48" y="174" width="1392" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Шаг</text>
+<text x="238" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">15 минут, 96 сроков</text>
+<text x="618" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2022-2023: 60 мин. 2024: чаще 30 мин. 2025: смесь 30 и</text>
+<text x="618" y="218" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">60</text>
+<text x="1060" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">тот же шаг, что у Кр1</text>
+<rect x="48" y="234" width="1392" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Есть</text>
+<text x="238" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">воздух, влажность, ветер, порывы, направление,</text>
+<text x="238" y="278" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">почва 5/10/20 см</text>
+<text x="618" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">воздух, влажность, ветер, порывы, направление,</text>
+<text x="618" y="278" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">давление</text>
+<text x="1060" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">те же колонки, что у Кр1</text>
+<rect x="48" y="294" width="1392" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Нет</text>
+<text x="238" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">давления</text>
+<text x="618" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">почвы</text>
+<text x="1060" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">почвы</text>
+<rect x="48" y="332" width="1392" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Особые годы</text>
+<text x="238" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1998 без направления. 2021 направление</text>
+<text x="238" y="376" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">недостоверно. Почва 5 см сбоит в 2016-2017</text>
+<text x="618" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2024: 1362 значения давления вне 940-1050 гПа. Апрель</text>
+<text x="618" y="376" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">вне месячного давления. 334 суток и 11 месяцев</text>
+<text x="1060" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2022-2023 давление часто вне диапазона и</text>
+<text x="1060" y="376" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">помечено флагом</text>
+<text x="48" y="436" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Время в файле не округлять и не переводить в другой пояс. Полные 12 месяцев АМЕ-60 на уровне станции: 1993, 2004, 2005, 2009, 2010, 2014, 2015, 2016. 2017-2021</text>
+<text x="48" y="460" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">прерывистые, сильнее зимой.</text>
+<text x="48" y="502" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">2024 год, сутки Сокола: Кр1 станция 363, Кр2 станция 366, Кр1 годное давление 334. 363 и 366 - покрытие станции, не каждого параметра.</text></svg>

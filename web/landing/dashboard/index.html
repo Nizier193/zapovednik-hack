@@ -20,6 +20,29 @@
     <div class="station-block" id="stations" role="radiogroup" aria-label="Станция"></div>
     <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/></svg> Показатель</p>
     <label class="field"><select id="metric"></select></label>
+    <p class="side-label">Вид графика</p>
+    <label class="field"><select id="view">
+      <option value="series">Временной ряд</option>
+      <option value="annual">Годовой ход</option>
+      <option value="dekad">Декады</option>
+      <option value="trend">Тренд одного месяца</option>
+      <option value="compare">Кр1 и Кр2</option>
+    </select></label>
+    <label class="field" id="trend-month-field" hidden>Месяц
+      <select id="trend-month">
+        <option value="1">Январь</option><option value="2">Февраль</option><option value="3">Март</option>
+        <option value="4">Апрель</option><option value="5">Май</option><option value="6">Июнь</option>
+        <option value="7">Июль</option><option value="8">Август</option><option value="9">Сентябрь</option>
+        <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
+      </select>
+    </label>
+    <div class="presets">
+      <button type="button" data-preset="ame">Архив АМЕ-60</button>
+      <button type="button" data-preset="pair">Поляна и поле, 2025</button>
+      <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
+    </div>
+    <button type="button" class="excel" id="excel">Выгрузка в Excel</button>
+    <button type="button" class="excel" id="exceptions">Журнал исключений</button>
     <p class="side-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/></svg> Разбор</p>
     <fieldset class="checks">
       <label><input type="checkbox" id="opt-ma" checked><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l5-5 4 3 8-8"/></svg><span>Скользящее среднее</span><i class="dot" style="background:#7dcec6"></i></label>
@@ -72,6 +95,22 @@
         <input type="range" id="range-end" aria-label="Конец выбранного периода">
       </div>
     </section>
+  </div>
+</div>
+<div class="journal" id="exceptions-panel" hidden>
+  <div class="journal-card" role="dialog" aria-labelledby="exceptions-title">
+    <header class="panel-head">
+      <h2 id="exceptions-title">Журнал исключений</h2>
+      <button type="button" id="exceptions-close">Закрыть</button>
+    </header>
+    <p class="legend">Строка выпадает из расчёта по флагу файла. Ниже счётчик и примеры сроков, не весь архив построчно.</p>
+    <div class="journal-summary" id="exceptions-summary"></div>
+    <div class="journal-scroll">
+      <table>
+        <thead><tr><th>Станция</th><th>Срок</th><th>Что</th><th>Значение</th><th>Почему исключено</th></tr></thead>
+        <tbody id="exceptions-rows"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 </body>

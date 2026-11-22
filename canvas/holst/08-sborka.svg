@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="766" viewBox="0 0 1440 766"><rect width="1440" height="766" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Сборка и демо</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Шесть поставок, потом 90 секунд</text>
+<rect x="48" y="100" width="1344" height="36" fill="#244031"/>
+<text x="58" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13"></text>
+<text x="128" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Поставка</text>
+<text x="828" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Готово, когда</text>
+<rect x="48" y="136" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1</text>
+<text x="128" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Публичная страница открывается и не падает</text>
+<text x="828" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Экран без traceback</text>
+<rect x="48" y="174" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2</text>
+<text x="128" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Один годовой CSV с диска: таблица и график выбранного параметра</text>
+<text x="828" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Пустой каталог пишет «нет файла», а не подставляет ряд</text>
+<rect x="48" y="212" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="234" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3</text>
+<text x="128" y="234" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">QC и полнота по этому файлу</text>
+<text x="828" y="234" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Видны пропуски, флаги и порог суток</text>
+<rect x="48" y="250" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="272" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">4</text>
+<text x="128" y="272" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сутки, декада, месяц и отклонение от среднего за выбранный период</text>
+<text x="828" y="272" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Имя среднего и число лет на экране</text>
+<rect x="48" y="288" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="310" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5</text>
+<text x="128" y="310" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сводка и тренд внутри одного прибора</text>
+<text x="828" y="310" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Пустой год не нарисован нулём, граница 2021/2022 не пересечена</text>
+<rect x="48" y="326" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="348" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">6</text>
+<text x="128" y="348" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Загрузка файла того же формата</text>
+<text x="828" y="348" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Новый год проходит экраны 2-5. Чужой формат не затирает старые файлы</text>
+<text x="48" y="408" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Графики Сокола, сравнение Кр1 и Кр2 за 2025 и внешний прогноз идут после этих шести. Первыми не строить стенку авторизации, Telegram, свою модель и склейку</text>
+<text x="48" y="432" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">станций.</text>
+<text x="48" y="474" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Демо ядра, 90 секунд. Курсор уже на АМЕ-60, t_air, июль 2015. Сокол, прогноз и загрузку в эти 90 секунд не открывать.</text>
+<rect x="48" y="492" width="1344" height="36" fill="#244031"/>
+<text x="58" y="516" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Время</text>
+<text x="178" y="516" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Фраза</text>
+<text x="818" y="516" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Экран</text>
+<rect x="48" y="528" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="550" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">0:00</text>
+<text x="178" y="550" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сейчас это лист Excel. Здесь период и параметр.</text>
+<text x="818" y="550" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Шапка: АМЕ-60, 1992-2021, с Соколом не объединяется</text>
+<rect x="48" y="566" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="588" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">0:20</text>
+<text x="178" y="588" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Июль 2015, температура. Неполный день в среднее не входит.</text>
+<text x="818" y="588" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Таблица суток и декад, строка без среднего</text>
+<rect x="48" y="604" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="626" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">0:45</text>
+<text x="178" y="626" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Флаг режет параметр, конфликт дублей режет строку.</text>
+<text x="818" y="626" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Два счётчика на карточке</text>
+<rect x="48" y="642" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="664" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1:05</text>
+<text x="178" y="664" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Среднее за выбранный период, вошло N лет.</text>
+<text x="818" y="664" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Список лет. Дыра 1999-2003 пустая. Слово «норма» не звучит</text>
+<rect x="48" y="680" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="702" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1:20</text>
+<text x="178" y="702" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2021, направление. Розу не строим.</text>
+<text x="818" y="702" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Отказ текстом правила</text></svg>

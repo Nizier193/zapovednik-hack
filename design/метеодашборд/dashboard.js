@@ -1,7 +1,7 @@
 const data = window.WEATHER_DATA;
 const get = id => document.getElementById(id);
 const dayMs = 86400000;
-const colors = { ink:'#f1f6e8', muted:'#acc0b0', line:'#32493d', accent:'#bced91', warm:'#f2cb92' };
+const colors = { ink:'#f4f6f1', muted:'#9aa89c', line:'#2a2e36', accent:'#bced91', warm:'#f2cb92' };
 const metrics = {
   t_air: ['Температура воздуха','°C','Сдвигаются ли сроки весеннего прогрева?', 'Сравнить весенние температуры по годам одной станции и сопоставить даты устойчивого потепления с наблюдениями за распусканием листьев.'],
   rh: ['Относительная влажность','%','Когда воздух наиболее сухой?', 'Сравнить периоды низкой влажности на одной станции и проверить, совпадают ли они с тёплыми днями.'],
@@ -209,7 +209,7 @@ function drawPlot() {
   const y = value => pad.top+(1-(value-low)/(high-low))*plotHeight;
   viewport = {ctx,width,height,x,y,pad,plotWidth};
   ctx.save();
-  ctx.font = '12px Aptos, Segoe UI, sans-serif';
+  ctx.font = '12px Inter, sans-serif';
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'right';
   for (let n=0,tick=low; tick<=high+step/1000 && n<10; n++,tick=low+n*step) {
@@ -240,7 +240,7 @@ function drawPlot() {
       ctx.beginPath(); ctx.moveTo(x(run[0].i),y(run[0].high));
       run.forEach(p=>ctx.lineTo(x(p.i),y(p.high)));
       [...run].reverse().forEach(p=>ctx.lineTo(x(p.i),y(p.low)));
-      ctx.closePath(); ctx.fillStyle='#90b87d42';ctx.fill();
+      ctx.closePath(); ctx.fillStyle='#bced9133';ctx.fill();
     }
     ctx.strokeStyle=colors.accent; ctx.fillStyle=colors.accent; ctx.lineWidth=2;
     if (gust()) {
@@ -259,7 +259,7 @@ function drawPlot() {
     ctx.lineTo(x(regression.last),y(regression.value(regression.last))); ctx.stroke(); ctx.setLineDash([]);
   }
   if (!valid.length) {
-    ctx.fillStyle=colors.muted; ctx.font='16px Aptos, Segoe UI, sans-serif';
+    ctx.fillStyle=colors.muted; ctx.font='16px Inter, sans-serif';
     ctx.fillText('За выбранный период расчёты недоступны',pad.left+plotWidth/2,height/2);
   }
   ctx.restore();
@@ -272,7 +272,7 @@ function drawFocus() {
   if (!p) return;
   const {ctx,x,y,width,pad,height} = viewport;
   const xx = x(p.i);
-  ctx.strokeStyle='#91b39a'; ctx.lineWidth=1; ctx.beginPath();
+  ctx.strokeStyle='#9aa89c'; ctx.lineWidth=1; ctx.beginPath();
   ctx.moveTo(xx,pad.top); ctx.lineTo(xx,height-pad.bottom);ctx.stroke();
   if (p.v!==null) {ctx.beginPath();ctx.arc(xx,y(p.v),4,0,Math.PI*2);ctx.fillStyle=colors.accent;ctx.fill();}
   ui.tooltip.textContent = `${p.label}\n${p.v===null?description(p):valueText(p.v)}\nПокрытие ${p.count} / ${p.capacity}`;
@@ -285,7 +285,7 @@ function drawOverview() {
   const values = series.map(p=>p[0]).filter(v=>v!==null);
   if (values.length) {
     const min = Math.min(...values), max = Math.max(...values);
-    ctx.strokeStyle='#82a891'; ctx.fillStyle='#82a891';ctx.lineWidth=1;
+    ctx.strokeStyle='#bced91'; ctx.fillStyle='#bced91';ctx.lineWidth=1;
     ctx.beginPath();
     let connected=false;
     series.forEach(([v],i)=>{

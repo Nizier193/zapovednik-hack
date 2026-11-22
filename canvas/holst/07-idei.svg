@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="726" viewBox="0 0 1440 726"><rect width="1440" height="726" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Идеи</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Поверх задачи, после ядра</text>
+<text x="48" y="124" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Этот блок не входит в PDF. Каждая идея крепится к уже обязательной проверке и не склеивает приборы.</text>
+<rect x="48" y="142" width="1344" height="36" fill="#244031"/>
+<text x="58" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13"></text>
+<text x="128" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Идея</text>
+<text x="948" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">К чему крепится</text>
+<rect x="48" y="178" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1</text>
+<text x="128" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сверка месяца с coverage_by_month.csv: наш расчёт и файл архива рядом</text>
+<text x="948" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Основная задача, проверка пропусков</text>
+<rect x="48" y="216" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2</text>
+<text x="128" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Карточки известных дыр: 1999-2003, soil_05 2016-2017, wind_dir 2021, давление Кр2 2022-2023</text>
+<text x="948" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Контроль качества</text>
+<rect x="48" y="254" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3</text>
+<text x="128" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Отказ текстом правила, а не пустой график</text>
+<text x="948" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Демо без ложного нуля</text>
+<rect x="48" y="292" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">4</text>
+<text x="128" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Декадный лист: декада, число валидных суток, среднее</text>
+<text x="948" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Польза для сотрудника заповедника</text>
+<rect x="48" y="330" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5</text>
+<text x="128" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Тренд только по годам АМЕ-60 с 12 валидными месяцами, дыра разрывом</text>
+<text x="948" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Обязательный тренд, показанный честно</text>
+<rect x="48" y="368" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">6</text>
+<text x="128" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Поляна и поле 2025: разница двух площадок, не новая станция</text>
+<text x="948" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Официальная допзадача</text>
+<rect x="48" y="406" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">7</text>
+<text x="128" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Давление Кр1 2024 с видимыми 1362, 334 и 11. Температура апреля жива</text>
+<text x="948" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Официальная допзадача</text>
+<rect x="48" y="444" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">8</text>
+<text x="128" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Загрузка CSV тех же колонок отдельным годом</text>
+<text x="948" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Официальная допзадача</text>
+<rect x="48" y="482" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">9</text>
+<text x="128" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Лаг почвы и воздуха только на АМЕ-60, вне дыры и без soil_05 за 2016-2017</text>
+<text x="948" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">После ядра</text>
+<rect x="48" y="520" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">10</text>
+<text x="128" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Внешний прогноз 24-48 часов отдельной панелью. Координаты урочища пометить «проверить»</text>
+<text x="948" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">В архив не писать</text>
+<rect x="48" y="578" width="1344" height="100" fill="#192D25" stroke="#3E5549"/>
+<rect x="48" y="578" width="4" height="100" fill="#F2CB92"/>
+<text x="68" y="606" fill="#F2CB92" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">От чего отказаться</text>
+<text x="68" y="630" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="16">Своя модель прогноза, импутация дыры 1999-2003, общая линия потепления с 1992 по 2025, возврат осадков и радиации, которых в схеме нет, роза за запретные</text>
+<text x="68" y="654" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="16">годы. На защите открывать то, что уже прошло репетицию на файле архива.</text></svg>

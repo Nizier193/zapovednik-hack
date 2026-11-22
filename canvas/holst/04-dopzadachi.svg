@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="418" viewBox="0 0 1440 418"><rect width="1440" height="418" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Допзадачи</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Сразу после ядра</text>
+<rect x="48" y="100" width="1344" height="36" fill="#244031"/>
+<text x="58" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13"></text>
+<text x="128" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Задача из PDF</text>
+<text x="488" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Что видно</text>
+<text x="988" y="124" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Чего нет</text>
+<rect x="48" y="136" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1</text>
+<text x="128" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Те же таблицы и графики Сокола</text>
+<text x="488" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Кр1 и Кр2 по отдельности, порог 18 часов</text>
+<text x="988" y="158" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Почвы и общей станции «Сокол»</text>
+<rect x="48" y="174" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2</text>
+<text x="128" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Поляна против поля, 2025</text>
+<text x="488" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Разница среднемесячной t_air, Кр1 минус Кр2, и две линии</text>
+<text x="488" y="218" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">суточного хода</text>
+<text x="988" y="196" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Третьей станции, другого года, другого параметра</text>
+<rect x="48" y="234" width="1344" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3</text>
+<text x="128" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Давление Сокола</text>
+<text x="488" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">pressure_hpa отдельно. У Кр1 за 2024 апреля в месячном</text>
+<text x="488" y="278" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">давлении нет</text>
+<text x="988" y="256" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Переноса этого запрета на температуру апреля</text>
+<rect x="48" y="294" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">4</text>
+<text x="128" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Загрузка нового файла того же формата</text>
+<text x="488" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Те же колонки проходят те же правила без правки кода</text>
+<text x="988" y="316" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Тихой дописки в чужой прибор и сдвига времени</text>
+<rect x="48" y="332" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5</text>
+<text x="128" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Краткосрочный прогноз внешнего API</text>
+<text x="488" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Отдельная панель, подпись сервиса, в архив не пишется</text>
+<text x="988" y="354" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Своей модели и пунктира на историческом графике</text></svg>

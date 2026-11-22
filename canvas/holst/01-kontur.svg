@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="748" viewBox="0 0 1440 748"><rect width="1440" height="748" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Кейс 02</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Умная аналитика метеоданных</text>
+<text x="48" y="124" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Центрально-Лесной заповедник, урочище Красное. Сдавать нужно веб-приложение: период и параметр дают таблицу, график и статистику, плюс репозиторий с инструкцией</text>
+<text x="48" y="148" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">запуска.</text>
+<text x="48" y="190" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Источник фактов: PDF кейса 02, yc-hack.ru. Идеи подписаны отдельно и не заменяют обязательный контур.</text>
+<rect x="48" y="208" width="1344" height="36" fill="#244031"/>
+<text x="58" y="232" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Порог</text>
+<text x="278" y="232" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Смысл</text>
+<rect x="48" y="244" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="266" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">72 / 96</text>
+<text x="278" y="266" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сутки АМЕ-60. 72 уже входят, 71 нет.</text>
+<rect x="48" y="282" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="304" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">18 / 24</text>
+<text x="278" y="304" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сутки Сокола, разные часы. 18 уже входят, 17 нет.</text>
+<rect x="48" y="320" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="342" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3 ряда</text>
+<text x="278" y="342" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">АМЕ-60, Кр1 поляна и Кр2 поле нельзя склеить.</text>
+<rect x="48" y="358" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="380" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5 задач</text>
+<text x="278" y="380" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Официальные допзадачи идут после рабочего стола.</text>
+<text x="48" y="436" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="14">АМЕ-60, 15 минут</text>
+<rect x="198.0" y="448" width="251.2" height="18" fill="#BCED91"/>
+<rect x="449.2" y="448" width="165.8" height="18" fill="#24382E" stroke="#F2CB92"/>
+<rect x="614.9" y="448" width="623.6" height="18" fill="#BCED91"/>
+<text x="48" y="498" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="14">Сокол М1, Кр1 и Кр2 отдельно</text>
+<rect x="1274.4" y="510" width="107.6" height="18" fill="#F1F6E8"/>
+<text x="449.2" y="484" fill="#F2CB92" font-family="Segoe UI, Arial, sans-serif" font-size="13">нет данных 4 янв 1999 - 17 авг 2003</text>
+<text x="48" y="582" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Пунктир на схеме ряда: границу 2021/2022 пересекать нельзя, ни трендом, ни одним средним.</text>
+<rect x="48" y="600" width="1344" height="100" fill="#192D25" stroke="#3E5549"/>
+<rect x="48" y="600" width="4" height="100" fill="#F2CB92"/>
+<text x="68" y="628" fill="#F2CB92" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Слова, которые закрывают верный расчёт</text>
+<text x="68" y="652" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="16">Климатическая норма. Все станции. Роза за 1998 или 2021. Нули вместо пропуска 1999-2003. Арифметическое среднее направления ветра. Одна линия с АМЕ-60 на</text>
+<text x="68" y="676" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="16">Сокол. Ряд 1992-2021 не является непрерывной 30-летней нормой ВМО: внутри него дыра больше четырёх лет.</text></svg>

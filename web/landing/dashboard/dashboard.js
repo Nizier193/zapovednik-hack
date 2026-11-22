@@ -31,7 +31,7 @@ const stations = [
   ["kr1", "Сокол М1, Кр1", "поляна, 2022-2025"],
   ["kr2", "Сокол М1, Кр2", "поле, 2022-2025"]
 ];
-const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart" };
+const state = { station: "ame60", metric: "t_air", from: 0, to: 0, focus: null, focusChart: "chart", view: "series", trendMonth: 1 };
 const format = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
 const monthName = new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: "UTC" });
 const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -354,7 +354,147 @@ function runs(items, read) {
   return groups;
 }
 
+function plotItems(canvas, items, read, title, legend) {
+  const view = scale(items, item => [read(item)]);
+  const frame = drawSeries(canvas, items, {
+    scale: view,
+    draw(ctx, x, y) {
+      ctx.strokeStyle = palette.teal;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      let open = false;
+      items.forEach((item, index) => {
+        const value = read(item);
+        if (value === null || !Number.isFinite(value)) { open = false; return; }
+        if (!open) { ctx.moveTo(x(index), y(value)); open = true; }
+        else ctx.lineTo(x(index), y(value));
+      });
+      ctx.stroke();
+    }
+  });
+  canvas._frame = frame;
+  get("main-title").textContent = title;
+  get("main-legend").textContent = legend;
+}
+
+function drawAnnual() {
+  const buckets = Array.from({ length: 12 }, (_, month) => ({ month: month + 1, label: ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"][month], values: [] }));
+  shown.forEach(item => { if (item.value !== null) buckets[item.month - 1].values.push(item.value); });
+  const items = buckets.map(bucket => ({ ...bucket, year: bucket.label, value: bucket.values.length ? average(bucket.values) : null, years: new Set(shown.filter(item => item.month === bucket.month && item.value !== null).map(item => item.year)).size }));
+  plotItems(get("chart"), items, item => item.value, "Годовой ход", "среднее полных месяцев одного номера, с числом лет");
+  get("chart")._read = item => `${item.label}\n${text(item.value)}\n${item.years} ${yearsWord(item.years)}`;
+}
+
+function drawMonthTrend() {
+  const month = state.trendMonth;
+  const names = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+  const items = months.filter(item => item.month === month && item.end >= state.from && item.start <= state.to);
+  const ready = items.filter(item => item.value !== null);
+  plotItems(get("chart"), items, item => item.value, `Тренд, ${names[month - 1]}`, ready.length >= 5 ? "линейная оценка по годам одного месяца, не прогноз" : "для линии нужно 5 пригодных лет");
+  if (ready.length >= 5) {
+    const frame = get("chart")._frame;
+    const xs = ready.map(item => item.year);
+    const ys = ready.map(item => item.value);
+    const meanX = average(xs);
+    const meanY = average(ys);
+    const spread = xs.reduce((sum, value) => sum + (value - meanX) ** 2, 0);
+    if (spread && frame) {
+      const slope = xs.reduce((sum, value, index) => sum + (value - meanX) * (ys[index] - meanY), 0) / spread;
+      const line = year => meanY + slope * (year - meanX);
+      frame.ctx.strokeStyle = palette.gold;
+      frame.ctx.setLineDash([5, 4]);
+      frame.ctx.beginPath();
+      frame.ctx.moveTo(frame.x(items.findIndex(item => item.year === ready[0].year)), frame.y(line(ready[0].year)));
+      const last = items.findIndex(item => item.year === ready[ready.length - 1].year);
+      frame.ctx.lineTo(frame.x(last), frame.y(line(ready[ready.length - 1].year)));
+      frame.ctx.stroke();
+      frame.ctx.setLineDash([]);
+    }
+  }
+  get("chart")._read = item => `${item.year}\n${text(item.value)}`;
+}
+
+function drawCompare() {
+  const saved = { station: state.station, metric: state.metric };
+  state.metric = "t_air";
+  state.station = "kr1";
+  const left = buildMonths();
+  state.station = "kr2";
+  const right = buildMonths();
+  state.station = saved.station;
+  state.metric = saved.metric;
+  const rightByKey = new Map(right.map(item => [item.key, item]));
+  const items = left.filter(item => item.key >= "2022-01" && item.key <= "2025-12").map(item => {
+    const other = rightByKey.get(item.key);
+    const both = item.value !== null && other && other.value !== null;
+    return { ...item, kr1: item.value, kr2: other ? other.value : null, value: both ? item.value : null, diff: both ? item.value - other.value : null };
+  });
+  const view = scale(items, item => [item.kr1, item.kr2]);
+  const frame = drawSeries(get("chart"), items, {
+    scale: view,
+    draw(ctx, x, y) {
+      [["kr1", palette.teal], ["kr2", palette.gold]].forEach(([key, color]) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        let open = false;
+        items.forEach((item, index) => {
+          if (item[key] === null) { open = false; return; }
+          if (!open) { ctx.moveTo(x(index), y(item[key])); open = true; }
+          else ctx.lineTo(x(index), y(item[key]));
+        });
+        ctx.stroke();
+      });
+    }
+  });
+  get("chart")._frame = frame;
+  get("main-title").textContent = "Кр1 и Кр2, температура";
+  get("main-legend").textContent = "поляна и поле по общим месяцам, без АМЕ-60";
+  const temp = value => value === null || !Number.isFinite(value) ? "—" : `${format.format(value)} °C`;
+  get("chart")._read = item => `${item.label}\nКр1 ${temp(item.kr1)}\nКр2 ${temp(item.kr2)}\nразность ${temp(item.diff)}`;
+}
+
+function drawDekad() {
+  const rows = source().series[state.metric] || [];
+  const start = Date.parse(source().start);
+  const groups = new Map();
+  for (let index = state.from; index <= state.to && index < rows.length; index += 1) {
+    const date = new Date(start + index * dayMs);
+    const day = date.getUTCDate();
+    const part = day <= 10 ? 1 : day <= 20 ? 2 : 3;
+    const key = `${date.toISOString().slice(0, 7)}-${part}`;
+    if (!groups.has(key)) groups.set(key, { key, label: `${["I","II","III"][part - 1]} ${date.toISOString().slice(0, 7)}`, year: date.getUTCFullYear(), values: [] });
+    if (rows[index][0] !== null) groups.get(key).values.push(rows[index][0]);
+  }
+  const items = [...groups.values()].map(item => ({ ...item, value: item.values.length ? average(item.values) : null }));
+  plotItems(get("chart"), items, item => item.value, "Декады", "среднее пригодных суток декады, пропуски пустые");
+  get("chart")._read = item => `${item.label}\n${text(item.value)}\nсуток ${item.values.length}`;
+}
+
+function downloadExcel() {
+  const header = ["Период", "Значение", "Единица", "Станция", "Показатель"];
+  const body = shown.map(item => [item.label, item.value === null ? "" : String(item.value), unit(), state.station, metrics[state.metric][0]]);
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Worksheet ss:Name="Данные"><Table>
+<Row>${header.map(cell => `<Cell><Data ss:Type="String">${cell}</Data></Cell>`).join("")}</Row>
+${body.map(row => `<Row>${row.map(cell => `<Cell><Data ss:Type="String">${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</Data></Cell>`).join("")}</Row>`).join("")}
+</Table></Worksheet></Workbook>`;
+  const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `arhiv-${state.station}-${state.metric}.xls`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 function drawMain() {
+  get("trend-month-field").hidden = state.view !== "trend";
+  if (state.view === "annual") return drawAnnual();
+  if (state.view === "trend") return drawMonthTrend();
+  if (state.view === "compare") return drawCompare();
+  if (state.view === "dekad") return drawDekad();
   const band = on("opt-band") && state.metric !== "wind_dir";
   const smooth = movingAverage(shown);
   const view = scale(shown, item => [item.value, band ? item.q10 : null, band ? item.q90 : null, on("opt-ma") ? smooth[shown.indexOf(item)] : null]);
@@ -617,8 +757,62 @@ function bootControls() {
     state.to = Math.max(Number(get("range-end").value), state.from);
     update();
   });
+  get("view").addEventListener("change", () => { state.view = get("view").value; update(); });
+  get("trend-month").addEventListener("change", () => { state.trendMonth = Number(get("trend-month").value); update(); });
+  get("excel").addEventListener("click", downloadExcel);
+  let exclusions = null;
+  let exclusionFilter = "";
+  const stationTitle = { ame60: "АМЕ-60", kr1: "Кр1, поляна", kr2: "Кр2, поле" };
+  function paintExceptions() {
+    const summary = get("exceptions-summary");
+    const body = get("exceptions-rows");
+    summary.innerHTML = exclusions.summary.map(item => {
+      const pressed = exclusionFilter === `${item.station}|${item.why}`;
+      return `<button type="button" data-filter="${item.station}|${item.why}" aria-pressed="${pressed}">${stationTitle[item.station] || item.station}: ${item.why}. ${item.count}</button>`;
+    }).join("");
+    const rows = exclusions.rows.filter(row => !exclusionFilter || `${row.station}|${row.why}` === exclusionFilter);
+    body.innerHTML = rows.map(row => `<tr><td>${stationTitle[row.station] || row.station}</td><td>${row.when || ""}</td><td>${row.parameter}</td><td>${row.value || ""}</td><td>${row.why}</td></tr>`).join("")
+      || `<tr><td colspan="5">Для этой причины в журнале только счётчик, без отдельных сроков.</td></tr>`;
+  }
+  get("exceptions").addEventListener("click", () => {
+    const open = () => { get("exceptions-panel").hidden = false; paintExceptions(); };
+    if (exclusions) { open(); return; }
+    fetch("/landing/dashboard/exceptions.json").then(response => response.json()).then(payload => {
+      exclusions = payload;
+      open();
+    }).catch(() => { get("side-note").textContent = "Журнал исключений не открылся."; });
+  });
+  get("exceptions-close").addEventListener("click", () => { get("exceptions-panel").hidden = true; });
+  get("exceptions-summary").addEventListener("click", event => {
+    const button = event.target.closest("[data-filter]");
+    if (!button) return;
+    exclusionFilter = exclusionFilter === button.dataset.filter ? "" : button.dataset.filter;
+    paintExceptions();
+  });
+  document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => {
+    const name = button.dataset.preset;
+    if (name === "ame") { state.view = "series"; state.metric = "t_air"; get("view").value = "series"; setStation("ame60"); }
+    if (name === "pair") {
+      state.metric = "t_air";
+      setStation("kr1");
+      state.view = "compare";
+      get("view").value = "compare";
+      state.from = Math.max(0, Math.round((Date.parse("2025-01-01") - Date.parse(source().start)) / dayMs));
+      state.to = Math.min(source().size - 1, Math.round((Date.parse("2025-12-31") - Date.parse(source().start)) / dayMs));
+      update();
+    }
+    if (name === "pressure") {
+      state.metric = "pressure_hpa";
+      setStation("kr1");
+      state.view = "series";
+      get("view").value = "series";
+      state.from = Math.max(0, Math.round((Date.parse("2024-01-01") - Date.parse(source().start)) / dayMs));
+      state.to = Math.min(source().size - 1, Math.round((Date.parse("2024-12-31") - Date.parse(source().start)) / dayMs));
+      update();
+    }
+  }));
   get("chart").addEventListener("pointermove", event => tip(get("chart"), event, "chart-tip", item =>
-    `${item.label}\n${text(item.value)}`));
+    get("chart")._read ? get("chart")._read(item) : `${item.label}\n${text(item.value)}`));
   get("anomaly").addEventListener("pointermove", event => tip(get("anomaly"), event, "anomaly-tip", item =>
     `${item.label}\nмесяц ${text(item.value)}\nотклонение ${item.anomaly === null ? "—" : text(item.anomaly)}\nкластер ${item.cluster === null ? "—" : item.cluster + 1}`));
   ["chart", "anomaly"].forEach(id => get(id).addEventListener("pointerleave", () => { get(`${id === "chart" ? "chart" : "anomaly"}-tip`).hidden = true; }));
@@ -632,5 +826,6 @@ function bootControls() {
 fetch("/landing/dashboard/series.json").then(response => response.json()).then(payload => {
   data = payload;
   bootControls();
-  setStation("ame60");
+  const asked = new URLSearchParams(location.search).get("station");
+  setStation(["ame60", "kr1", "kr2"].includes(asked) ? asked : "ame60");
 }).catch(() => { get("stats").textContent = "Архив не открылся."; });

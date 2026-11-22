@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="682" viewBox="0 0 1440 682"><rect width="1440" height="682" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Движок</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Без этого график врёт</text>
+<text x="48" y="124" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Считать три потока отдельно: АМЕ-60, Кр1, Кр2. Флаги применяются до полноты. Полнота суток решается раньше среднего. Месяц публикуется только если он пригоден.</text>
+<rect x="48" y="142" width="1344" height="36" fill="#244031"/>
+<text x="58" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13"></text>
+<text x="128" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Функция</text>
+<text x="468" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Правило</text>
+<rect x="48" y="178" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1</text>
+<text x="128" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">normalize_datetime</text>
+<text x="468" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Оставить YYYY-MM-DD HH:MM. Не округлять и не сдвигать пояс.</text>
+<rect x="48" y="216" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2</text>
+<text x="128" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">identify_stream</text>
+<text x="468" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">АМЕ-60, Кр1 или Кр2. Чужой поток в этот расчёт не входит.</text>
+<rect x="48" y="254" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3</text>
+<text x="128" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">resolve_parameter</text>
+<text x="468" y="276" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Нет колонки - параметр в этот год не измерялся. Это не ноль.</text>
+<rect x="48" y="292" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">4</text>
+<text x="128" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">apply_flags</text>
+<text x="468" y="314" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">parameter:reason снимает поле. dup_conflict снимает строку до любых средних.</text>
+<rect x="48" y="330" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5</text>
+<text x="128" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">day_coverage</text>
+<text x="468" y="352" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">АМЕ-60: разные 15-минутные метки из 96. Сокол: разные часы из 24.</text>
+<rect x="48" y="368" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">6</text>
+<text x="128" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">complete_day</text>
+<text x="468" y="390" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">АМЕ-60 от 72 слотов. Сокол от 18 часов. Ниже порога суток в расчётах нет.</text>
+<rect x="48" y="406" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">7</text>
+<text x="128" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">daily_mean</text>
+<text x="468" y="428" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Среднее всех годных значений этих суток, не среднее уникальных часов.</text>
+<rect x="48" y="444" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">8</text>
+<text x="128" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">month_usable</text>
+<text x="468" y="466" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Неполных суток не больше 10 и нет серии из 5 или больше.</text>
+<rect x="48" y="482" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">9</text>
+<text x="128" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">decade_mean</text>
+<text x="468" y="504" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1-10, 11-20, 21-е до последнего дня. Только внутри пригодного месяца.</text>
+<rect x="48" y="520" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">10</text>
+<text x="128" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">period_mean</text>
+<text x="468" y="542" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Среднее опубликованных месячных значений. Имя: среднее за выбранный период, плюс число лет.</text>
+<rect x="48" y="558" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="580" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">11</text>
+<text x="128" y="580" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">deviation_from_period</text>
+<text x="468" y="580" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Месяц минус среднее того же потока, той же точки и того же параметра.</text>
+<rect x="48" y="596" width="1344" height="38" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="618" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">12</text>
+<text x="128" y="618" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">trend_points</text>
+<text x="468" y="618" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Точка года - среднее его пригодных месяцев. Пустой год не становится нулём. Через 2021/2022 набора нет.</text></svg>

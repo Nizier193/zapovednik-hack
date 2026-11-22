@@ -4,15 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Метеомониторинг · Урочище Красное</title>
-  <link rel="stylesheet" href="dashboard.css">
-  <script defer src="weather-data.js"></script>
-  <script defer src="dashboard.js"></script>
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+  <script defer src="/dashboard/weather-data.js"></script>
+  <script defer src="/dashboard/dashboard.js"></script>
 </head>
 <body>
 <main class="page">
   <header class="header">
     <div class="identity"><span class="station-mark" aria-hidden="true"></span><span>Центрально-Лесной заповедник</span></div>
-    <a class="excel-link" href="weather-check.xlsx" download><span class="excel-icon" aria-hidden="true">X</span> Сверка в Excel</a>
+    <div class="header-links">
+      <a class="back-link" href="/landing">Лендинг</a>
+      <a class="excel-link" href="/dashboard/weather-check.xlsx" download><span class="excel-icon" aria-hidden="true">X</span> Сверка в Excel</a>
+    </div>
   </header>
   <section class="intro" aria-labelledby="title">
     <p class="eyebrow">Урочище Красное</p>

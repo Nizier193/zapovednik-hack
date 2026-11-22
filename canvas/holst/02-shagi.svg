@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="684" viewBox="0 0 1440 684"><rect width="1440" height="684" fill="#101E19"/><text x="48" y="36" fill="#ACC0B0" font-family="Consolas, monospace" font-size="13">Обязательный контур</text>
+<text x="48" y="64" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">Восемь шагов стола учёного</text>
+<text x="48" y="124" fill="#ACC0B0" font-family="Segoe UI, Arial, sans-serif" font-size="16">Сначала один рабочий стол. Допзадачи включаются после того, как этот стол считает АМЕ-60 по правилам PDF.</text>
+<rect x="48" y="142" width="1344" height="36" fill="#244031"/>
+<text x="58" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Шаг</text>
+<text x="148" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Что обязано работать</text>
+<text x="768" y="166" fill="#BCED91" font-family="Consolas, monospace" font-size="13">Как проверить</text>
+<rect x="48" y="178" width="1344" height="38" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">1</text>
+<text x="148" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Одна станция, период и один параметр. Пункта «все станции» нет.</text>
+<text x="768" y="200" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Календарь АМЕ-60 обрывается в 2021 и не тянется в 2022.</text>
+<rect x="48" y="216" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">2</text>
+<text x="148" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Таблица, график и статистика по валидным значениям. Невалидный день виден и</text>
+<text x="148" y="260" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">в среднее не входит.</text>
+<text x="768" y="238" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Июль 2015, t_air: неполная строка без среднего.</text>
+<rect x="48" y="276" width="1344" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="298" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">3</text>
+<text x="148" y="298" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">QC: флаг parameter:reason снимает только этот параметр. dup_conflict снимает</text>
+<text x="148" y="320" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">строку целиком.</text>
+<text x="768" y="298" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">На карточке два разных счётчика, не один «брак».</text>
+<rect x="48" y="336" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="358" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">4</text>
+<text x="148" y="358" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Сутки АМЕ-60: не меньше 72 из 96 слотов. Сокол: не меньше 18 разных часов из</text>
+<text x="148" y="380" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">24.</text>
+<text x="768" y="358" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">71 слот и 17 часов в расчёт не попадают. Две записи одного часа: один час для</text>
+<text x="768" y="380" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">полноты и оба значения в среднем.</text>
+<rect x="48" y="396" width="1344" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="418" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">5</text>
+<text x="148" y="418" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Месяц входит, если неполных суток не больше 10 и нет пяти или более подряд.</text>
+<text x="148" y="440" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Декады: 1-10, 11-20, 21-е до конца месяца.</text>
+<text x="768" y="418" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">10 разрозненных неполных суток ещё можно. 5 подряд закрывают месяц.</text>
+<rect x="48" y="456" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="478" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">6</text>
+<text x="148" y="478" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Многолетье подписано «среднее за выбранный период» и показывает число</text>
+<text x="148" y="500" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">вошедших лет.</text>
+<text x="768" y="478" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Заголовок читается с места жюри. Слов «климатическая норма» нет.</text>
+<rect x="48" y="516" width="1344" height="60" fill="#192D25" stroke="#3E5549"/>
+<text x="58" y="538" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">7</text>
+<text x="148" y="538" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Тренд и отклонение только внутри одного ряда. Дыра 4 января 1999 - 17</text>
+<text x="148" y="560" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">августа 2003 пустая.</text>
+<text x="768" y="538" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">На оси нет линии через пустые годы и нет линии с 2021 на 2022.</text>
+<rect x="48" y="576" width="1344" height="60" fill="#14241C" stroke="#3E5549"/>
+<text x="58" y="598" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">8</text>
+<text x="148" y="598" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Роза ветров АМЕ-60 за 1998 и 2021 не строится.</text>
+<text x="768" y="598" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Отказ текстом правила, не пустой круг и не нули. Остальные параметры 2021</text>
+<text x="768" y="620" fill="#F1F6E8" font-family="Segoe UI, Arial, sans-serif" font-size="15">остаются.</text></svg>

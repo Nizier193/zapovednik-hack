@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Карта станций</title>
+  <link rel="stylesheet" href="/landing/map/map.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/landing">Полевой журнал</a>
+  <h1>Урочище внутри заповедника</h1>
+  <a class="back" href="/landing/dashboard">Весь архив</a>
+</header>
+<main class="stage">
+  <canvas id="map"></canvas>
+  <aside class="card" id="card" hidden>
+    <p class="eyebrow" id="card-place"></p>
+    <h2 id="card-title"></h2>
+    <p id="card-wind"></p>
+    <p class="note">Площадка нарисована внутри границы заповедника. В архиве нет геодезических координат приборов, поэтому поляна и поле стоят рядом схематично.</p>
+    <a class="go" id="card-go" href="/landing/dashboard">Открыть архив этой станции</a>
+  </aside>
+</main>
+<p class="credit">Контур: OpenStreetMap, Центрально-Лесной заповедник. Ветер: последний пригодный день архива.</p>
+<script src="/landing/map/map.js"></script>
+</body>
+</html>

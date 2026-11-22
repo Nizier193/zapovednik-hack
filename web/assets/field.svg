@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 520" fill="none">
+  <defs>
+    <pattern id="check" width="16" height="16" patternUnits="userSpaceOnUse">
+      <rect width="16" height="16" fill="#14241c"/>
+      <rect width="8" height="8" fill="#2a4034"/>
+      <rect x="8" y="8" width="8" height="8" fill="#2a4034"/>
+    </pattern>
+  </defs>
+
+  <g transform="translate(-10 70)">
+    <path d="M248 40L390 320H106z" fill="#bced91" opacity="0.34"/>
+    <path d="M248 180L390 320H106z" fill="url(#check)"/>
+    <path d="M248 8L424 354H72z" fill="none" stroke="#acc0b0" opacity="0.7"/>
+  </g>
+
+  <g fill="none" stroke="#acc0b0" stroke-width="1.5" opacity="0.55">
+    <ellipse cx="430" cy="300" rx="200" ry="72"/>
+    <ellipse cx="444" cy="310" rx="146" ry="50"/>
+    <ellipse cx="456" cy="318" rx="96" ry="32"/>
+    <ellipse cx="466" cy="324" rx="50" ry="16"/>
+  </g>
+
+  <path d="M0 430C240 360 460 470 720 410s340-80 740-20" fill="none" stroke="#acc0b0" stroke-dasharray="2 9" opacity="0.55"/>
+  <path d="M80 300C240 240 380 360 560 300c140-48 220 36 380 4" fill="none" stroke="#bced91" opacity="0.35"/>
+
+  <g fill="none" stroke="#acc0b0" opacity="0.4">
+    <circle cx="250" cy="150" r="72"/>
+    <circle cx="250" cy="150" r="44"/>
+    <circle cx="250" cy="150" r="20"/>
+  </g>
+
+  <g transform="translate(560 160)" stroke="#acc0b0" fill="none">
+    <circle r="86"/>
+    <circle r="52"/>
+    <path d="M0-96V96M-96 0H96"/>
+    <path d="M0-38L12 0 0 38-12 0z" fill="#bced91" stroke="none"/>
+  </g>
+
+  <g transform="translate(1368 40)" stroke="#acc0b0" fill="none">
+    <path d="M0 0V140"/>
+    <path d="M0 10L26 0"/>
+    <path d="M0 28L26 18"/>
+    <path d="M0 46L16 40"/>
+  </g>
+
+  <g transform="translate(40 80)" fill="none" stroke="#bced91" stroke-width="1.6" opacity="0.55">
+    <path d="M30 0L54 36H6z"/>
+    <path d="M30 22L62 68H-2z"/>
+    <path d="M30 46L70 104H-10z"/>
+    <path d="M30 104V132"/>
+  </g>
+
+  <g stroke="#3e5549">
+    <path d="M1440 0L1120 520"/>
+    <path d="M1440 0L1220 520"/>
+    <path d="M1440 0L1320 520"/>
+    <path d="M1440 0L1400 520"/>
+    <path d="M1440 0V520"/>
+  </g>
+
+  <path d="M700 70l20 36h-40z" fill="#bced91" opacity="0.7"/>
+  <circle cx="770" cy="86" r="12" fill="#3e5549"/>
+  <rect x="820" y="64" width="26" height="26" fill="none" stroke="#acc0b0"/>
+  <rect x="980" y="120" width="30" height="30" fill="url(#check)"/>
+  <circle cx="1040" cy="200" r="14" fill="#192d25" stroke="#3e5549"/>
+  <path d="M900 180l14 26h-28z" fill="#bced91" opacity="0.5"/>
+
+  <g stroke="#acc0b0" opacity="0.5">
+    <path d="M360 470H520"/>
+    <path d="M360 464V476M410 466V474M460 466V474M520 464V476"/>
+  </g>
+</svg>

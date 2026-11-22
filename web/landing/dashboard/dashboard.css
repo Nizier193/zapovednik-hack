@@ -47,6 +47,9 @@ svg { width: 16px; height: 16px; fill: none; stroke: var(--teal); stroke-width: 
 .menu-list { position: absolute; z-index: 5; left: 0; right: 0; margin: 6px 0 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 12px; background: #173042; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28); }
 .menu-list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 8px; background: transparent; padding: 8px 10px; }
 .menu-list button:hover, .menu-list button[aria-current="true"] { background: rgba(125, 206, 198, 0.16); }
+.presets { display: grid; gap: 4px; }
+.presets button, .excel { width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: #132430; padding: 7px 10px; }
+.excel { color: var(--teal); }
 .checks { margin: 0; padding: 0; border: 0; display: grid; gap: 4px; }
 .checks label { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 10px; }
 .checks label:hover { background: rgba(255, 255, 255, 0.04); }
@@ -56,6 +59,15 @@ svg { width: 16px; height: 16px; fill: none; stroke: var(--teal); stroke-width: 
 .side-note { color: var(--muted); font-size: 12px; }
 .back { margin-top: auto; color: var(--muted); text-decoration: none; font-size: 13px; }
 .back:hover { color: var(--ink); }
+.journal { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(8, 16, 14, 0.62); }
+.journal-card { width: min(920px, calc(100% - 40px)); max-height: calc(100vh - 40px); display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #132430; border: 1px solid var(--line); border-radius: 14px; }
+.journal-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+.journal-summary button { border: 1px solid var(--line); border-radius: 10px; background: #101c27; color: var(--ink); padding: 6px 8px; text-align: left; }
+.journal-summary button[aria-pressed="true"] { border-color: var(--teal); }
+.journal-scroll { min-height: 0; overflow: auto; }
+.journal table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.journal th, .journal td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.journal th { position: sticky; top: 0; background: #132430; color: var(--muted); font-weight: 400; }
 
 .maincol { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) 112px; gap: 8px; padding: 12px 14px 10px; }
 .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
