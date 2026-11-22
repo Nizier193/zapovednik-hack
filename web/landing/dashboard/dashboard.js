@@ -437,7 +437,7 @@ function setStation(id, options = {}) {
     if (b < arch.start || a > arch.end) {
       a = arch.start;
       b = arch.end;
-    } else {
+  } else {
       if (a < arch.start) a = arch.start;
       if (b > arch.end) b = arch.end;
     }
@@ -1144,8 +1144,8 @@ function drawOverlay(canvas, legend, picked) {
         ctx.arc(xOf(index), yOf(value, scale), 3, 0, Math.PI * 2);
         ctx.fill();
       });
-    }
-    ctx.restore();
+  }
+  ctx.restore();
   });
   lines.forEach(line => {
     if (!line.imputed) return;
@@ -1245,7 +1245,7 @@ function drawMain() {
     draw(ctx, x, y) {
       if (band) {
         runs(shown, item => item.q90).forEach(run => {
-          ctx.beginPath();
+    ctx.beginPath();
           run.forEach((index, order) => order ? ctx.lineTo(x(index), y(shown[index].q90)) : ctx.moveTo(x(index), y(shown[index].q90)));
           for (let cursor = run.length - 1; cursor >= 0; cursor -= 1) ctx.lineTo(x(run[cursor]), y(shown[run[cursor]].q10));
           ctx.closePath();
@@ -1258,7 +1258,7 @@ function drawMain() {
       runs(shown, item => item.value).forEach(run => {
         ctx.beginPath();
         run.forEach((index, order) => order ? ctx.lineTo(x(index), y(shown[index].value)) : ctx.moveTo(x(index), y(shown[index].value)));
-        ctx.stroke();
+    ctx.stroke();
       });
       if (on("opt-ma")) {
         ctx.setLineDash([5, 4]);
@@ -1622,8 +1622,31 @@ function syncDateFields() {
 let moduleDrag = "";
 let moduleRefitTries = 0;
 
-function availableParams() {
-  return (stationData().parameters || []).filter(key => PARAMS[key] && stationData().series[key]);
+function availableParams(stationId) {
+  const station = stationId && data.stations[stationId] ? data.stations[stationId] : stationData();
+  return (station.parameters || []).filter(key => PARAMS[key] && station.series[key]);
+}
+
+function runAsStation(stationId, fn) {
+  if (!stationId || stationId === state.station || !data.stations[stationId]) return fn();
+  const fromDate = iso(state.from);
+  const toDate = iso(state.to);
+  const saved = { station: state.station, from: state.from, to: state.to };
+  state.station = stationId;
+  state.from = clampIndex(dayIndex(fromDate));
+  state.to = clampIndex(dayIndex(toDate));
+  if (state.from > state.to) { const swap = state.from; state.from = state.to; state.to = swap; }
+  try { return fn(); }
+  finally {
+    state.station = saved.station;
+    state.from = saved.from;
+    state.to = saved.to;
+  }
+}
+
+function moduleTitle(module) {
+  if (module.title) return module.title;
+  return module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
 }
 
 function defaultPicked() {
@@ -1633,9 +1656,9 @@ function defaultPicked() {
 }
 
 function pruneModules() {
-  const available = availableParams();
   state.modules.forEach(module => {
     if (module.kind !== "chart" || !module.picked) return;
+    const available = availableParams(module.station);
     Object.keys(module.picked).forEach(key => {
       if (!available.includes(key)) delete module.picked[key];
     });
@@ -1645,7 +1668,7 @@ function pruneModules() {
 }
 
 function moduleMenu(module) {
-  return availableParams().map(key => {
+  return availableParams(module.station).map(key => {
     const on = !!(module.picked && module.picked[key]);
     const stats = key === "wind_dir" ? ["mean"] : Object.keys(LINE_STYLE);
     const lines = on ? `<div class="line-row">${stats.map(stat => {
@@ -1702,6 +1725,10 @@ function bindPlotTip(canvas) {
 }
 
 function paintChart(module, node) {
+  return runAsStation(module.station, () => paintChartNow(module, node));
+}
+
+function paintChartNow(module, node) {
   const host = node.querySelector(".module-plots");
   const legend = node.querySelector(".module-legend");
   const keys = Object.keys(module.picked || {}).filter(key => (module.picked[key] || []).length && PARAMS[key]);
@@ -1789,7 +1816,7 @@ function buildModule(module) {
   if (module.kind === "rose") {
     article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">Роза ветров</h2>${remove}</header><div class="module-plots"></div>`;
   } else {
-    const title = module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
+    const title = moduleTitle(module);
     article.innerHTML = `<header class="module-head">${dragControl}<h2 id="${module.id}-title">${title}</h2><div class="layout-switch" role="group" aria-label="Расположение графиков"><button type="button" data-layout="overlay">Вместе</button><button type="button" data-layout="split">Раздельно</button></div><div class="mod-drop"><button type="button" class="mod-toggle" aria-expanded="false" aria-controls="${module.id}-params">Параметры (0)</button><div class="mod-menu" id="${module.id}-params" aria-label="Параметры графика"></div></div>${remove}</header><div class="module-legend legend"></div><div class="module-plots"></div><p class="chart-help"><span class="outlier-key" aria-hidden="true"></span>Выбросы учтены в масштабе.</p>`;
   }
   const drag = article.querySelector(".drag");
@@ -1808,7 +1835,7 @@ function buildModule(module) {
   });
   drag.addEventListener("keydown", event => {
     if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
-      event.preventDefault();
+  event.preventDefault();
       moveBy(event.key === "ArrowUp" ? -1 : 1);
     }
     if (event.key === "Escape") { moveControls.hidden = true; drag.setAttribute("aria-expanded", "false"); }
@@ -1912,7 +1939,7 @@ function paintModules() {
     const node = root.querySelector(`[data-module="${module.id}"]`);
     if (!node) return;
     const title = node.querySelector("h2");
-    if (module.kind === "chart" && title) title.textContent = module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
+    if (module.kind === "chart" && title) title.textContent = moduleTitle(module);
     node.querySelectorAll("[data-layout]").forEach(button => {
       button.setAttribute("aria-pressed", String(button.dataset.layout === module.layout));
     });
@@ -1991,9 +2018,14 @@ function applyPreset(name) {
     return;
   }
   if (name === "pair") {
-    pick("t_air");
-    setStation("kr1");
+    const stamp = Date.now();
+    state.metric = "t_air";
     state.view = "series";
+    state.modules = [
+      { id: `mod-${stamp}`, kind: "chart", layout: "overlay", station: "kr1", title: "Поляна, Кр1", picked: { t_air: ["mean"] } },
+      { id: `mod-${stamp + 1}`, kind: "chart", layout: "overlay", station: "kr2", title: "Поле, Кр2", picked: { t_air: ["mean"] } }
+    ];
+    setStation("kr1");
     state.from = clampIndex(dayIndex("2025-01-01"));
     state.to = clampIndex(dayIndex("2025-12-31"));
     if (state.from > state.to) { const swap = state.from; state.from = state.to; state.to = swap; }
