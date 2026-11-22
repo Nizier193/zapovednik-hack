@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#131c1e">
   <title>Архив, урочище Красное</title>
-  <link rel="stylesheet" href="/landing/dashboard/dashboard.css?v=14">
+  <link rel="stylesheet" href="/landing/dashboard/dashboard.css?v=15">
   <script defer src="/landing/dashboard/import-data.js?v=13"></script>
-  <script defer src="/landing/dashboard/dashboard.js?v=14"></script>
+  <script defer src="/landing/dashboard/dashboard.js?v=16"></script>
 </head>
 <body>
 <div id="stage">
@@ -15,34 +15,28 @@
   <a class="skip-link" href="#modules">Перейти к графикам</a>
   <header class="app-header">
     <nav class="brow" aria-label="Основная навигация">
-      <a class="brand" href="/landing" aria-label="Метеоархив, главная">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4C10 3 4 7 5 14c1 6 11 7 14-10Z"/><path d="m6 19 9-10M10 15l-1-5M13 12h4"/></svg>
-        <span>Метеоархив</span>
-      </a>
-      <span class="header-divider" aria-hidden="true"></span>
-      <span class="header-context">Урочище Красное</span>
-      <div class="header-actions">
-        <button type="button" id="toggle-impute" class="brow-link impute-toggle" aria-pressed="false" title="Показать восстановленные пропуски для шага Дни">Интерполяция</button>
-        <div class="brow-item">
-          <button type="button" class="brow-link" aria-expanded="false" aria-controls="templates-menu">Шаблоны<svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
-          <div class="brow-drop" id="templates-menu" hidden>
-            <span class="menu-caption">Готовые периоды</span>
-            <button type="button" data-preset="ame">Архив АМЕ-60</button>
-            <button type="button" data-preset="pair">Поляна и поле, 2025</button>
-            <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
-          </div>
-        </div>
-        <div class="brow-item">
-          <button type="button" class="brow-link" aria-expanded="false" aria-controls="file-menu">Файл<svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
-          <div class="brow-drop" id="file-menu" hidden>
-            <button type="button" id="menu-import">Импорт CSV / JSON</button>
-            <a href="/landing/dashboard/import-example.json" download="meteo-example.json">Пример JSON</a>
-            <span class="menu-caption">Экспорт</span>
-            <button type="button" id="excel">Таблица Excel</button>
-            <button type="button" id="pdf">Графики в PDF</button>
-          </div>
+      <a class="brow-link" href="/landing">Главное</a>
+      <div class="brow-item">
+        <button type="button" class="brow-link has-caret" aria-expanded="false" aria-controls="templates-menu">Шаблоны</button>
+        <div class="brow-drop" id="templates-menu" hidden>
+          <span class="menu-caption">Готовые периоды</span>
+          <button type="button" data-preset="ame">Архив АМЕ-60</button>
+          <button type="button" data-preset="pair">Поляна и поле, 2025</button>
+          <button type="button" data-preset="pressure">Давление Кр1, 2024</button>
         </div>
       </div>
+      <div class="brow-item">
+        <button type="button" class="brow-link has-caret" aria-expanded="false" aria-controls="file-menu">Файл</button>
+        <div class="brow-drop" id="file-menu" hidden>
+          <button type="button" id="menu-import">Импорт CSV / JSON</button>
+          <a href="/landing/dashboard/import-example.json" download="meteo-example.json">Пример JSON</a>
+          <span class="menu-caption">Экспорт</span>
+          <button type="button" id="excel">Таблица Excel</button>
+          <button type="button" id="pdf">Графики в PDF</button>
+        </div>
+      </div>
+      <button type="button" id="toggle-impute" class="brow-link impute-toggle" aria-pressed="false" title="Показать восстановленные пропуски. Это не измерение">Интерполяция</button>
+      <span class="notebook-name">Архив наблюдений</span>
     </nav>
   </header>
   <div class="work">

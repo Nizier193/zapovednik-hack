@@ -224,6 +224,32 @@ function reconstructDaily(days, excludedIndices, metric) {
 }
 
 const reconstructionCache = new WeakMap();
+function monthImputed(rows, daily) {
+  const values = [];
+  const mask = [];
+  rows.forEach(row => {
+    if (row.mean != null) {
+      values.push(row.mean);
+      mask.push(false);
+      return;
+    }
+    const samples = [];
+    const from = Number.isInteger(row.start) ? row.start : row.x;
+    const to = Number.isInteger(row.end) ? row.end : row.x;
+    for (let index = from; index <= to; index += 1) {
+      if (daily.mask[index] && Number.isFinite(daily.values[index])) samples.push(daily.values[index]);
+    }
+    if (!samples.length) {
+      values.push(null);
+      mask.push(false);
+      return;
+    }
+    values.push(average(samples));
+    mask.push(true);
+  });
+  return { values, mask };
+}
+
 function reconstructionFor(metric) {
   const days = (stationData().series[metric] || {}).days || [];
   const excluded = anomalySet(metric);
@@ -958,6 +984,8 @@ function overlayModel(picked) {
         const mid = values.length ? (values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2) : null;
         rows.push({
           x: (cursor + end) / 2,
+          start: cursor,
+          end,
           label: monthName.format(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))),
           mean: values.length ? average(values) : null,
           median: mid,
@@ -982,12 +1010,13 @@ function overlayModel(picked) {
         trend = rows.map((row, index) => row.mean == null ? null : meanY + (index - meanX) * slope);
       }
     }
-    const reconstruction = state.impute && state.step === "day" && key !== "wind_dir" && chosen.includes("mean") ? reconstructionFor(key) : null;
+    const daily = state.impute && key !== "wind_dir" && chosen.includes("mean") ? reconstructionFor(key) : null;
+    const reconstruction = daily ? (state.step === "day"
+      ? { values: rows.map(row => daily.values[row.x] ?? null), mask: rows.map(row => !!daily.mask[row.x]) }
+      : monthImputed(rows, daily)) : null;
     return chosen.filter(stat => stat !== "trend" || trend).map(stat => {
       const line = { key, stat, rows, values: stat === "trend" ? trend : rows.map(row => row[stat]) };
-      if (stat === "mean" && reconstruction) {
-        line.imputed = { values: rows.map(row => reconstruction.values[row.x] ?? null), mask: rows.map(row => !!reconstruction.mask[row.x]) };
-      }
+      if (stat === "mean" && reconstruction) line.imputed = reconstruction;
       return line;
     });
   });
@@ -1011,7 +1040,6 @@ function drawOverlay(canvas, legend, picked) {
     if (state.impute) {
       const eligible = lines.filter(line => line.key !== "wind_dir");
       if (!eligible.length) legend.innerHTML += `<span class="impute-note">Направление ветра не интерполируется</span>`;
-      else if (state.step !== "day") legend.innerHTML += `<span class="impute-note">интерполяция только для шага Дни</span>`;
       else if (eligible.some(line => line.stat === "mean")) legend.innerHTML += `<span class="imputed-legend"><i></i>пропуски восстановлены, это не измерение</span>`;
       else legend.innerHTML += `<span class="impute-note">Для интерполяции включите Среднее</span>`;
     }
@@ -1468,22 +1496,21 @@ function drawSoil() {
 
 function selectionBox(width) {
   const last = Math.max(1, lastIndex());
-  let left = state.from / last * width;
-  let right = state.to / last * width;
-  if (right - left < 18) {
+  const inset = 16;
+  const inner = Math.max(1, width - inset * 2);
+  let left = inset + state.from / last * inner;
+  let right = inset + state.to / last * inner;
+  if (right - left < 36) {
     const mid = (left + right) / 2;
-    left = Math.max(0, mid - 9);
-    right = Math.min(width, left + 18);
+    left = Math.max(inset, mid - 18);
+    right = Math.min(width - inset, left + 36);
   }
   return { left, right, last };
 }
 
 function pointerZone(x, left, right) {
-  if (right - left < 36) {
-    const mid = (left + right) / 2;
-    if (x < mid - 8) return "start";
-    if (x > mid + 8) return "end";
-    return "move";
+  if (right - left < 56) {
+    return x < (left + right) / 2 ? "start" : "end";
   }
   if (x >= left - 8 && x <= left + 16) return "start";
   if (x >= right - 16 && x <= right + 8) return "end";
@@ -1495,7 +1522,7 @@ function paintOverview() {
   const days = seriesData().days || [];
   const bad = anomalySet(state.metric);
   const series = days.map((row, index) => row.valid && Number.isFinite(row.v) && !bad.has(index) ? row.v : null);
-  const filled = state.impute && state.step === "day" && state.metric !== "wind_dir" ? reconstructionFor(state.metric) : null;
+  const filled = state.impute && state.metric !== "wind_dir" ? reconstructionFor(state.metric) : null;
   const canvas = get("overview");
   const box = canvas.getBoundingClientRect();
   if (box.width < 2 || box.height < 2) return;
@@ -2364,4 +2391,12 @@ fetch("/landing/dashboard/series.json").then(response => response.json()).then(p
   const date = query.get("date");
   if (qStart && qEnd) applyQueryRange(qStart, qEnd, false);
   else if (date) applyQueryRange(date, date, true);
+  if (state.to - state.from < 21) {
+    const last = lastIndex();
+    const mid = Math.round((state.from + state.to) / 2);
+    state.from = Math.max(0, mid - 15);
+    state.to = Math.min(last, state.from + 30);
+    if (state.to - state.from < 21) state.from = Math.max(0, state.to - 30);
+    update();
+  }
 }).catch(() => { get("stats").textContent = "Архив не открылся."; });
