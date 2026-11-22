@@ -185,9 +185,14 @@ function monthTrend(items, month) {
 
 // Fit the complete daily archive before selecting a visible period. Neither
 // measurements nor anomalies are replaced, and predictions never train the fit.
-function reconstructDaily(days, excludedIndices, metric) {
+function reconstructDaily(days, excludedIndices, metric, field) {
   const excluded = excludedIndices || new Set();
-  const measured = days.map((entry, index) => entry && entry.valid && Number.isFinite(entry.v) && !excluded.has(index) ? entry.v : null);
+  const read = entry => {
+    if (!entry || !entry.valid) return null;
+    const value = field === "min" ? entry.min : field === "max" ? entry.max : entry.v;
+    return Number.isFinite(value) ? value : null;
+  };
+  const measured = days.map((entry, index) => excluded.has(index) ? null : read(entry));
   const values = measured.slice();
   const mask = days.map(() => false);
   if (metric === "wind_dir") return { values, mask };
@@ -224,12 +229,12 @@ function reconstructDaily(days, excludedIndices, metric) {
 }
 
 const reconstructionCache = new WeakMap();
-function monthImputed(rows, daily) {
+function monthImputed(rows, daily, fieldName, pick) {
   const values = [];
   const mask = [];
   rows.forEach(row => {
-    if (row.mean != null) {
-      values.push(row.mean);
+    if (row[fieldName] != null) {
+      values.push(row[fieldName]);
       mask.push(false);
       return;
     }
@@ -244,22 +249,23 @@ function monthImputed(rows, daily) {
       mask.push(false);
       return;
     }
-    values.push(average(samples));
+    values.push(pick(samples));
     mask.push(true);
   });
   return { values, mask };
 }
 
-function reconstructionFor(metric) {
+function reconstructionFor(metric, field = "v") {
   const days = (stationData().series[metric] || {}).days || [];
   const excluded = anomalySet(metric);
   let cached = reconstructionCache.get(days);
   if (!cached) { cached = new Map(); reconstructionCache.set(days, cached); }
-  const previous = cached.get(metric);
+  const cacheKey = `${metric}:${field}`;
+  const previous = cached.get(cacheKey);
   if (previous && previous.excluded === excluded) return previous.result;
-  const filled = reconstructDaily(days, excluded, metric);
+  const filled = reconstructDaily(days, excluded, metric, field);
   const result = Object.freeze({ values: Object.freeze(filled.values), mask: Object.freeze(filled.mask) });
-  cached.set(metric, { excluded, result });
+  cached.set(cacheKey, { excluded, result });
   return result;
 }
 
@@ -1007,16 +1013,35 @@ function overlayModel(picked) {
         const meanY = average(ys);
         const den = xs.reduce((sum, value) => sum + (value - meanX) ** 2, 0);
         const slope = den ? xs.reduce((sum, value, index) => sum + (value - meanX) * (ys[index] - meanY), 0) / den : 0;
-        trend = rows.map((row, index) => row.mean == null ? null : meanY + (index - meanX) * slope);
+        trend = rows.map((row, index) => meanY + (index - meanX) * slope);
       }
     }
-    const daily = state.impute && key !== "wind_dir" && chosen.includes("mean") ? reconstructionFor(key) : null;
-    const reconstruction = daily ? (state.step === "day"
-      ? { values: rows.map(row => daily.values[row.x] ?? null), mask: rows.map(row => !!daily.mask[row.x]) }
-      : monthImputed(rows, daily)) : null;
+    const dailyMean = state.impute && key !== "wind_dir" && (chosen.includes("mean") || chosen.includes("median")) ? reconstructionFor(key, "v") : null;
+    const dailyMin = state.impute && key !== "wind_dir" && chosen.includes("min") ? reconstructionFor(key, "min") : null;
+    const dailyMax = state.impute && key !== "wind_dir" && chosen.includes("max") ? reconstructionFor(key, "max") : null;
+    const dayMask = (rows, daily) => ({ values: rows.map(row => daily.values[row.x] ?? null), mask: rows.map(row => !!daily.mask[row.x]) });
+    const medianOf = samples => {
+      const sorted = samples.slice().sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+    const imputedFor = stat => {
+      if (state.step === "day") {
+        if (stat === "mean" && dailyMean) return dayMask(rows, dailyMean);
+        if (stat === "min" && dailyMin) return dayMask(rows, dailyMin);
+        if (stat === "max" && dailyMax) return dayMask(rows, dailyMax);
+        return null;
+      }
+      if (stat === "mean" && dailyMean) return monthImputed(rows, dailyMean, "mean", average);
+      if (stat === "min" && dailyMin) return monthImputed(rows, dailyMin, "min", samples => Math.min(...samples));
+      if (stat === "max" && dailyMax) return monthImputed(rows, dailyMax, "max", samples => Math.max(...samples));
+      if (stat === "median" && dailyMean) return monthImputed(rows, dailyMean, "median", medianOf);
+      return null;
+    };
     return chosen.filter(stat => stat !== "trend" || trend).map(stat => {
       const line = { key, stat, rows, values: stat === "trend" ? trend : rows.map(row => row[stat]) };
-      if (stat === "mean" && reconstruction) line.imputed = reconstruction;
+      const imputed = imputedFor(stat);
+      if (imputed) line.imputed = imputed;
       return line;
     });
   });
@@ -1042,10 +1067,10 @@ function drawOverlay(canvas, legend, picked, prepared) {
       return `<span style="--series:${color}"><i data-stat="${line.stat}"></i>${name}</span>`;
     }).join("");
     if (state.impute) {
-      const eligible = lines.filter(line => line.key !== "wind_dir");
+      const eligible = lines.filter(line => line.key !== "wind_dir" && line.stat !== "trend");
+      const restored = lines.some(line => line.imputed && line.imputed.mask.some(Boolean));
       if (!eligible.length) legend.innerHTML += `<span class="impute-note">Направление ветра не интерполируется</span>`;
-      else if (eligible.some(line => line.stat === "mean")) legend.innerHTML += `<span class="imputed-legend"><i></i>пропуски восстановлены, это не измерение</span>`;
-      else legend.innerHTML += `<span class="impute-note">Для интерполяции включите Среднее</span>`;
+      else if (restored) legend.innerHTML += `<span class="imputed-legend"><i></i>пропуски восстановлены, это не измерение</span>`;
     }
   }
   const byUnit = new Map();
