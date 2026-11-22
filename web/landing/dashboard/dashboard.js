@@ -1644,6 +1644,27 @@ function runAsStation(stationId, fn) {
   }
 }
 
+function separateModule(module) {
+  const keys = Object.keys(module.picked || {}).filter(key => (module.picked[key] || []).length && PARAMS[key]);
+  if (keys.length < 2) {
+    module.layout = "split";
+    update();
+    return;
+  }
+  const index = state.modules.findIndex(item => item.id === module.id);
+  const stamp = Date.now();
+  const pieces = keys.map((key, offset) => ({
+    id: `mod-${stamp}-${offset}`,
+    kind: "chart",
+    layout: "split",
+    station: module.station,
+    title: module.title ? `${module.title}: ${PARAMS[key][0]}` : PARAMS[key][0],
+    picked: { [key]: module.picked[key].slice() }
+  }));
+  state.modules.splice(index, 1, ...pieces);
+  update();
+}
+
 function moduleTitle(module) {
   if (module.title) return module.title;
   return module.layout === "split" ? "Отдельные графики" : "Совмещённый график";
@@ -1882,8 +1903,12 @@ function buildModule(module) {
     focusModule(state.modules[Math.min(index, state.modules.length - 1)].id);
   });
   article.querySelectorAll("[data-layout]").forEach(button => button.addEventListener("click", () => {
-    module.layout = button.dataset.layout;
-    update();
+    if (button.dataset.layout === "split") separateModule(module);
+    else {
+      module.layout = "overlay";
+      if (!module.title || module.title.includes(":")) module.title = "";
+      update();
+    }
   }));
   const toggle = article.querySelector(".mod-toggle");
   const menu = article.querySelector(".mod-menu");

@@ -141,7 +141,7 @@ h2 { font-size: 17px; line-height: 1.4; font-weight: 600; }
 .module-legend span { display: inline-flex; gap: 6px; align-items: center; }
 .module-legend i { color: var(--series); }
 .module-plots { min-width: 0; }
-.module-plots.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.module-plots.split { display: flex; flex-direction: column; gap: 16px; }
 .plot-card { min-width: 0; }
 .plot-card h3 { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .plot-card .module-legend { margin-bottom: 8px; }
